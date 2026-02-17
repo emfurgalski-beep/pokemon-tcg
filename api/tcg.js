@@ -1,89 +1,83 @@
-const SETS_URL =
-  'https://cdn.jsdelivr.net/gh/PokemonTCG/pokemon-tcg-data@master/sets/en.json'
+const SETS_URL = 'https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/sets/en.json'
+const CARDS_URL = 'https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/cards/en.json'
 
-const CARDS_URL =
-  'https://cdn.jsdelivr.net/gh/PokemonTCG/pokemon-tcg-data@master/cards/en.json'
-
-function setCache(res, seconds = 3600) {
+function cache(res, seconds = 3600) {
   res.setHeader('Cache-Control', `public, s-maxage=${seconds}, stale-while-revalidate=86400`)
 }
 
 async function fetchJsonWithRetry(url, tries = 3) {
   let lastErr
-
   for (let i = 0; i < tries; i++) {
     try {
-      const r = await fetch(url, { headers: { Accept: 'application/json' } })
+      const r = await fetch(url, {
+        headers: { 
+          'Accept': 'application/json',
+          'User-Agent': 'FromAlabastia/1.0'
+        }
+      })
       if (!r.ok) throw new Error(`Upstream HTTP ${r.status}`)
       return await r.json()
     } catch (e) {
       lastErr = e
-      // backoff: 200ms, 400ms, 800ms
-      await new Promise((r) => setTimeout(r, 200 * Math.pow(2, i)))
+      console.error(`Attempt ${i + 1} failed:`, e.message)
+      await new Promise(r => setTimeout(r, 200 * Math.pow(2, i)))
     }
   }
-
   throw lastErr
 }
 
 export default async function handler(req, res) {
   try {
-    // accept multiple param names (new + old)
-    const endpoint = String(
-      req.query.endpoint ??
-      req.query.endPoint ??
-      req.query.endpoi ??
-      req.query.end ??
-      ''
-    ).trim()
+    const endpoint = String(req.query.endpoint || '').trim()
 
     if (!endpoint) {
-      return res.status(400).json({ error: 'Missing or invalid endpoint' })
+      return res.status(400).json({ error: 'Missing endpoint' })
     }
 
-    // health
-    if (endpoint === 'ping') {
-      setCache(res, 60)
-      return res.status(200).json({ ok: true, from: 'from-alabastia' })
-    }
-
-    // sets
+    // Sets
     if (endpoint === 'sets') {
       const sets = await fetchJsonWithRetry(SETS_URL, 3)
-      setCache(res, 6 * 60 * 60) // 6h
+      cache(res, 6 * 60 * 60)
       return res.status(200).json({ data: sets })
     }
 
-    // cards in set
+    // Cards
     if (endpoint === 'cards') {
       const setId = String(req.query.setId || '').trim()
       if (!setId) return res.status(400).json({ error: 'Missing setId' })
 
       const cards = await fetchJsonWithRetry(CARDS_URL, 3)
-      const filtered = cards.filter((c) => c?.set?.id === setId)
+      const filtered = cards.filter(c => c?.set?.id === setId)
 
-      setCache(res, 60 * 60) // 1h
+      cache(res, 60 * 60)
       return res.status(200).json({ data: filtered })
     }
 
-    // single card
+    // Card
     if (endpoint === 'card') {
       const id = String(req.query.id || '').trim()
       if (!id) return res.status(400).json({ error: 'Missing id' })
 
       const cards = await fetchJsonWithRetry(CARDS_URL, 3)
-      const card = cards.find((c) => c?.id === id)
+      const card = cards.find(c => c?.id === id)
 
       if (!card) return res.status(404).json({ error: 'Card not found' })
 
-      setCache(res, 60 * 60) // 1h
+      cache(res, 60 * 60)
       return res.status(200).json({ data: card })
     }
 
+    // Ping
+    if (endpoint === 'ping') {
+      cache(res, 60)
+      return res.status(200).json({ ok: true })
+    }
+
     return res.status(400).json({
-      error: `Unknown endpoint "${endpoint}". Use: ping | sets | cards | card`
+      error: `Unknown endpoint: ${endpoint}`
     })
   } catch (err) {
-    return res.status(500).json({ error: String(err?.message || err) })
+    console.error('API Error:', err)
+    return res.status(500).json({ error: String(err.message || err) })
   }
 }
