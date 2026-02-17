@@ -1,20 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { slugify } from '../lib/slug'
+import Breadcrumbs from '../components/Breadcrumbs'
 import '../styles/set.css'
 
 export default function SetPage() {
   const { setId } = useParams()
 
   const [setInfo, setSetInfo] = useState(null)
-
   const [cards, setCards] = useState([])
   const [query, setQuery] = useState('')
   const [loadingCards, setLoadingCards] = useState(true)
   const [loadingSet, setLoadingSet] = useState(true)
   const [error, setError] = useState('')
 
-  // 1) Load set info (name, series, logo, releaseDate, etc.)
+  // Load set info
   useEffect(() => {
     let alive = true
 
@@ -27,7 +27,6 @@ export default function SetPage() {
         const found = (j.data || []).find(s => s?.id === setId)
         if (alive) setSetInfo(found || null)
       } catch (e) {
-        // set header can still work without setInfo, so we don't hard-fail here
         console.error(e)
       } finally {
         if (alive) setLoadingSet(false)
@@ -38,7 +37,7 @@ export default function SetPage() {
     return () => { alive = false }
   }, [setId])
 
-  // 2) Load cards for this set
+  // Load cards
   useEffect(() => {
     let alive = true
 
@@ -82,9 +81,12 @@ export default function SetPage() {
 
   return (
     <main className="page">
-      <Link to="/pokemon/expansions" className="breadcrumbLink">← Back to expansions</Link>
+      <Breadcrumbs items={[
+        { label: 'Expansions', to: '/pokemon/expansions' },
+        { label: title }
+      ]} />
 
-      {/* SCRYDEX-LIKE HEADER */}
+      {/* Hero */}
       <section className="setHero">
         <div className="setHero__left">
           {setInfo?.images?.logo ? (
@@ -101,7 +103,6 @@ export default function SetPage() {
           </div>
 
           <div className="setHero__meta">
-            {/* usunęliśmy setId z UI, ale jeśli chcesz możesz go tu dodać jako pill */}
             {series && <span>{series}</span>}
             <span>•</span>
             <span>{total} cards</span>
@@ -159,7 +160,6 @@ export default function SetPage() {
         </div>
       )}
 
-      {/* optional tiny helper */}
       {loadingSet && <div style={{ height: 0 }} />}
     </main>
   )

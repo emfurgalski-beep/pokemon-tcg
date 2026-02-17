@@ -11,11 +11,26 @@ export default function Navbar() {
         </Link>
 
         <nav className="nav__links">
-          <NavLink className={({ isActive }) => `nav__link ${isActive ? 'is-active' : ''}`} to="/pokemon/expansions">
+          <NavLink 
+            className={({ isActive }) => `nav__link ${isActive ? 'is-active' : ''}`} 
+            to="/pokemon/expansions"
+          >
             Expansions
           </NavLink>
-          <a className="nav__link" href="#" onClick={(e) => e.preventDefault()}>Blog (soon)</a>
-          <a className="nav__link" href="#" onClick={(e) => e.preventDefault()}>Shop (later)</a>
+          
+          <NavLink 
+            className={({ isActive }) => `nav__link ${isActive ? 'is-active' : ''}`} 
+            to="/blog"
+          >
+            Blog
+          </NavLink>
+          
+          <NavLink 
+            className={({ isActive }) => `nav__link ${isActive ? 'is-active' : ''}`} 
+            to="/shop"
+          >
+            Shop
+          </NavLink>
         </nav>
       </div>
     </header>
