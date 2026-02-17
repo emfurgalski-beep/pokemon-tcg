@@ -10,8 +10,8 @@ export default async function handler(req, res) {
     if (!r.ok) return res.status(502).json({ error: `Cards source error: ${r.status}` })
 
     const cards = await r.json()
+    const card = cards.find(c => c?.id === id)
 
-    const card = cards.find(c => c.id === id)
     if (!card) return res.status(404).json({ error: 'Card not found' })
 
     res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
