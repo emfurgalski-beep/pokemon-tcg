@@ -13,7 +13,6 @@ export default function App() {
 
         <Route path="/pokemon/expansions" element={<ExpansionsPage />} />
         <Route path="/pokemon/expansions/:setId" element={<SetPage />} />
-
         <Route path="/pokemon/cards/:slug/:cardId" element={<CardPage />} />
 
         <Route path="*" element={<Navigate to="/pokemon/expansions" replace />} />
