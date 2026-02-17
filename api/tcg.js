@@ -12,14 +12,25 @@ async function fetchWithRetry(url, tries = 3) {
   let lastErr
   for (let i = 0; i < tries; i++) {
     try {
-      const r = await fetch(url, {
-        headers: { 'Accept': 'application/json' }
-      })
-      if (!r.ok) throw new Error(`HTTP ${r.status}`)
+      const headers = { 'Accept': 'application/json' }
+      
+      // Add API key if available
+      if (process.env.TCG_API_KEY) {
+        headers['X-Api-Key'] = process.env.TCG_API_KEY
+      }
+      
+      const r = await fetch(url, { headers })
+      
+      if (!r.ok) {
+        const text = await r.text()
+        console.error(`HTTP ${r.status}:`, text)
+        throw new Error(`HTTP ${r.status}`)
+      }
+      
       return await r.json()
     } catch (e) {
       lastErr = e
-      console.error(`Attempt ${i + 1} failed:`, e.message)
+      console.error(`Attempt ${i + 1} failed for ${url}:`, e.message)
       if (i < tries - 1) await new Promise(r => setTimeout(r, 500 * Math.pow(2, i)))
     }
   }
