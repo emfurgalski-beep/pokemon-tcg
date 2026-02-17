@@ -86,15 +86,12 @@ export default function ExpansionsPage() {
                 <div className="setBody">
                   <div className="setName">{set.name}</div>
                   <div className="setMeta">
-                    <span className="pill">{set.id}</span>
                     <span className="pill">{set.releaseDate}</span>
                     <span className="pill">{set.total} cards</span>
                   </div>
                 </div>
 
-                <div className="setSymbolWrap">
-                  <img className="setSymbol" src={set.images?.symbol} alt="" loading="lazy" />
-                </div>
+
               </Link>
             ))}
           </div>
