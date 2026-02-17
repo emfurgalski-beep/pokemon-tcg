@@ -1,29 +1,41 @@
-const SETS_URL = 'https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/sets/en.json'
-const CARDS_URL = 'https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/cards/en.json'
+// In-memory cache (resets on cold start)
+let setsCache = null
+let cacheTime = null
+const CACHE_DURATION = 6 * 60 * 60 * 1000 // 6 hours
 
-function cache(res, seconds = 3600) {
+function setHeaders(res, seconds = 3600) {
   res.setHeader('Cache-Control', `public, s-maxage=${seconds}, stale-while-revalidate=86400`)
+  res.setHeader('Access-Control-Allow-Origin', '*')
 }
 
-async function fetchJsonWithRetry(url, tries = 3) {
+async function fetchWithRetry(url, tries = 3) {
   let lastErr
   for (let i = 0; i < tries; i++) {
     try {
       const r = await fetch(url, {
-        headers: { 
-          'Accept': 'application/json',
-          'User-Agent': 'FromAlabastia/1.0'
-        }
+        headers: { 'Accept': 'application/json' }
       })
-      if (!r.ok) throw new Error(`Upstream HTTP ${r.status}`)
+      if (!r.ok) throw new Error(`HTTP ${r.status}`)
       return await r.json()
     } catch (e) {
       lastErr = e
       console.error(`Attempt ${i + 1} failed:`, e.message)
-      await new Promise(r => setTimeout(r, 200 * Math.pow(2, i)))
+      if (i < tries - 1) await new Promise(r => setTimeout(r, 500 * Math.pow(2, i)))
     }
   }
   throw lastErr
+}
+
+async function loadAllSets() {
+  const now = Date.now()
+  if (setsCache && cacheTime && (now - cacheTime < CACHE_DURATION)) {
+    return setsCache
+  }
+
+  const data = await fetchWithRetry('https://api.pokemontcg.io/v2/sets?orderBy=-releaseDate')
+  setsCache = data.data
+  cacheTime = now
+  return setsCache
 }
 
 export default async function handler(req, res) {
@@ -36,41 +48,44 @@ export default async function handler(req, res) {
 
     // Sets
     if (endpoint === 'sets') {
-      const sets = await fetchJsonWithRetry(SETS_URL, 3)
-      cache(res, 6 * 60 * 60)
+      const sets = await loadAllSets()
+      setHeaders(res, 6 * 60 * 60)
       return res.status(200).json({ data: sets })
     }
 
-    // Cards
+    // Cards in set
     if (endpoint === 'cards') {
       const setId = String(req.query.setId || '').trim()
-      if (!setId) return res.status(400).json({ error: 'Missing setId' })
+      if (!setId) {
+        return res.status(400).json({ error: 'Missing setId' })
+      }
 
-      const cards = await fetchJsonWithRetry(CARDS_URL, 3)
-      const filtered = cards.filter(c => c?.set?.id === setId)
-
-      cache(res, 60 * 60)
-      return res.status(200).json({ data: filtered })
+      // Query pokemontcg.io API with set filter
+      const data = await fetchWithRetry(
+        `https://api.pokemontcg.io/v2/cards?q=set.id:${setId}&pageSize=250`
+      )
+      
+      setHeaders(res, 60 * 60)
+      return res.status(200).json({ data: data.data })
     }
 
-    // Card
+    // Single card
     if (endpoint === 'card') {
       const id = String(req.query.id || '').trim()
-      if (!id) return res.status(400).json({ error: 'Missing id' })
+      if (!id) {
+        return res.status(400).json({ error: 'Missing id' })
+      }
 
-      const cards = await fetchJsonWithRetry(CARDS_URL, 3)
-      const card = cards.find(c => c?.id === id)
-
-      if (!card) return res.status(404).json({ error: 'Card not found' })
-
-      cache(res, 60 * 60)
-      return res.status(200).json({ data: card })
+      const data = await fetchWithRetry(`https://api.pokemontcg.io/v2/cards/${id}`)
+      
+      setHeaders(res, 60 * 60)
+      return res.status(200).json({ data: data.data })
     }
 
-    // Ping
+    // Health
     if (endpoint === 'ping') {
-      cache(res, 60)
-      return res.status(200).json({ ok: true })
+      setHeaders(res, 60)
+      return res.status(200).json({ ok: true, cached: !!setsCache })
     }
 
     return res.status(400).json({
