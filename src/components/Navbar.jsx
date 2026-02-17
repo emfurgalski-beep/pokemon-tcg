@@ -1,42 +1,23 @@
-import { Link } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
+import '../styles/navbar.css'
 
-const styles = {
-  nav: {
-    background: '#1a1d27',
-    borderBottom: '2px solid #2a2d3a',
-    padding: '0 32px',
-    height: '64px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  logo: {
-    fontSize: '20px',
-    fontWeight: '800',
-    color: '#f5c842',
-  },
-  links: {
-    display: 'flex',
-    gap: '32px',
-    listStyle: 'none',
-  },
-  link: {
-    color: '#8888a0',
-    fontWeight: '600',
-    fontSize: '14px',
-  },
-}
-
-function Navbar() {
+export default function Navbar() {
   return (
-    <nav style={styles.nav}>
-      <Link to="/" style={styles.logo}>From Alabastia</Link>
-      <ul style={styles.links}>
-        <li><Link to="/" style={styles.link}>Sets</Link></li>
-        <li><a href="#" style={styles.link}>Blog</a></li>
-      </ul>
-    </nav>
+    <header className="nav">
+      <div className="nav__inner">
+        <Link className="nav__brand" to="/pokemon/expansions">
+          <span className="nav__bolt">⚡</span>
+          <span>From Alabastia</span>
+        </Link>
+
+        <nav className="nav__links">
+          <NavLink className={({ isActive }) => `nav__link ${isActive ? 'is-active' : ''}`} to="/pokemon/expansions">
+            Expansions
+          </NavLink>
+          <a className="nav__link" href="#" onClick={(e) => e.preventDefault()}>Blog (soon)</a>
+          <a className="nav__link" href="#" onClick={(e) => e.preventDefault()}>Shop (later)</a>
+        </nav>
+      </div>
+    </header>
   )
 }
-
-export default Navbar

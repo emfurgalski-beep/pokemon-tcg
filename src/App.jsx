@@ -1,19 +1,23 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import Navbar from './components/Navbar'
-import ExpansionsPage from './pages/ExpansionsPage'
-import CardPage from './pages/CardPage'
-import SetPage from './pages/SetPage'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import Navbar from './components/Navbar.jsx'
+import ExpansionsPage from './pages/ExpansionsPage.jsx'
+import SetPage from './pages/SetPage.jsx'
+import CardPage from './pages/CardPage.jsx'
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <>
       <Navbar />
       <Routes>
-        <Route path="/" element={<Navigate to="/expansions" />} />
-        <Route path="/expansions" element={<ExpansionsPage />} />
-        <Route path="/set/:setId" element={<SetPage />} />
-        <Route path="/cards/:name/:cardId" element={<CardPage />} />
+        <Route path="/" element={<Navigate to="/pokemon/expansions" replace />} />
+
+        <Route path="/pokemon/expansions" element={<ExpansionsPage />} />
+        <Route path="/pokemon/expansions/:setId" element={<SetPage />} />
+
+        <Route path="/pokemon/cards/:slug/:cardId" element={<CardPage />} />
+
+        <Route path="*" element={<Navigate to="/pokemon/expansions" replace />} />
       </Routes>
-    </BrowserRouter>
+    </>
   )
 }

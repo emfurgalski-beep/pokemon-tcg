@@ -1,81 +1,93 @@
-.expHeader{
+.page__header{
   display:flex;
-  align-items:flex-end;
-  justify-content:space-between;
-  gap:16px;
-  margin: 4px 0 18px;
+  flex-direction:column;
+  gap: 12px;
+  margin-bottom: 22px;
 }
 
-.expControls{ margin: 18px 0 22px; }
-
-.expMessage{
-  margin-top: 36px;
-  color: var(--muted);
+.series{
+  margin-top: 26px;
 }
 
-.expSection{ margin-top: 28px; }
-.expSectionTop{
+.series__head{
   display:flex;
   align-items:center;
   justify-content:space-between;
   margin-bottom: 12px;
 }
-.expH2{
-  margin:0;
-  font-size: 16px;
-  color: rgba(233,236,255,.9);
-  letter-spacing: .2px;
+
+.series__count{
+  color: var(--muted);
+  font-weight: 900;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(18,21,30,.55);
 }
 
-.expGrid{
+.grid{
   display:grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 14px;
 }
 
-.expCard{
-  border:1px solid var(--border);
+.set{
+  position:relative;
   border-radius: var(--radius);
-  background: linear-gradient(180deg, rgba(18,22,41,.82), rgba(15,19,36,.82));
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(18,21,30,.92), rgba(18,21,30,.72));
+  box-shadow: var(--shadow);
   overflow:hidden;
-  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
-  box-shadow: 0 10px 30px rgba(0,0,0,.18);
+  transition: transform .15s, border-color .15s;
+  min-height: 170px;
 }
-.expCard:hover{
-  transform: translateY(-4px);
-  border-color: rgba(110,231,255,.35);
-  box-shadow: 0 14px 44px rgba(0,0,0,.28);
+.set:hover{
+  transform: translateY(-3px);
+  border-color: rgba(245,200,66,.35);
 }
 
-.expLogoWrap{
-  height: 120px;
+.set__top{
+  height: 86px;
   display:flex;
   align-items:center;
   justify-content:center;
-  background: radial-gradient(500px 200px at 50% 20%, rgba(110,231,255,.12), transparent 60%),
-              rgba(15,19,36,.65);
-  border-bottom: 1px solid var(--border);
-  padding: 14px;
+  background: rgba(11,13,19,.55);
+  border-bottom: 1px solid rgba(35,40,58,.75);
 }
 
-.expLogo{
-  max-width: 100%;
-  max-height: 96px;
+.set__logo{
+  max-width: 85%;
+  max-height: 58px;
   object-fit: contain;
-  filter: drop-shadow(0 10px 22px rgba(0,0,0,.35));
 }
 
-.expMeta{ padding: 12px 12px 14px; }
-.expName{ font-weight: 800; font-size: 14px; margin-bottom: 6px; }
-.expSub{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 650;
+.set__body{
+  padding: 12px 12px 14px;
 }
-.dot{
-  width:4px; height:4px; border-radius:99px;
-  background: rgba(233,236,255,.25);
+
+.set__name{
+  font-weight: 900;
+  margin-bottom: 8px;
+  letter-spacing: -0.2px;
+}
+
+.set__meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap: 8px;
+}
+
+.set__symbolWrap{
+  position:absolute;
+  right: 10px;
+  bottom: 10px;
+  width: 28px;
+  height: 28px;
+  opacity: .75;
+}
+.set__symbol{
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }

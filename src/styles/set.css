@@ -1,0 +1,71 @@
+.setHead{
+  display:flex;
+  flex-wrap:wrap;
+  gap: 16px;
+  align-items:flex-end;
+  justify-content:space-between;
+  margin-bottom: 20px;
+}
+
+.breadcrumb{
+  margin-bottom: 10px;
+}
+
+.breadcrumb__link{
+  display:inline-flex;
+  gap: 8px;
+  align-items:center;
+  color: var(--muted);
+  font-weight: 900;
+  font-size: 13px;
+}
+.breadcrumb__link:hover{ color: var(--text); }
+
+.cardGrid{
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 14px;
+}
+
+.miniCard{
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: rgba(18,21,30,.78);
+  overflow:hidden;
+  transition: transform .15s, border-color .15s;
+}
+.miniCard:hover{
+  transform: translateY(-3px);
+  border-color: rgba(245,200,66,.35);
+}
+
+.miniCard__imgWrap{
+  background: rgba(11,13,19,.55);
+  border-bottom: 1px solid rgba(35,40,58,.75);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding: 10px;
+}
+.miniCard__img{
+  width: 100%;
+  height: 180px;
+  object-fit: contain;
+}
+
+.miniCard__body{
+  padding: 10px 10px 12px;
+}
+
+.miniCard__name{
+  font-weight: 900;
+  font-size: 13px;
+  margin-bottom: 8px;
+  letter-spacing: -0.2px;
+}
+
+.miniCard__meta{
+  display:flex;
+  gap: 8px;
+  flex-wrap:wrap;
+}

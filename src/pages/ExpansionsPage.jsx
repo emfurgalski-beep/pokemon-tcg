@@ -1,110 +1,104 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import '../styles/expansions.css'
+import { formatDate } from '../lib/format.js'
 
 export default function ExpansionsPage() {
   const [sets, setSets] = useState([])
-  const [q, setQ] = useState('')
   const [loading, setLoading] = useState(true)
-  const [err, setErr] = useState(null)
+  const [error, setError] = useState('')
+  const [query, setQuery] = useState('')
 
   useEffect(() => {
-    ;(async () => {
+    let alive = true
+    async function run() {
       try {
-        const r = await fetch('/api/sets')
-        const json = await r.json()
-        if (!r.ok) throw new Error(json?.error || `HTTP ${r.status}`)
-        setSets(json.data || [])
+        setLoading(true)
+        const r = await fetch('/api/tcg?endpoint=sets')
+        const j = await r.json()
+        if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`)
+        if (alive) setSets(j.data || [])
       } catch (e) {
-        setErr(String(e.message || e))
+        if (alive) setError(String(e.message || e))
       } finally {
-        setLoading(false)
+        if (alive) setLoading(false)
       }
-    })()
+    }
+    run()
+    return () => { alive = false }
   }, [])
 
   const filtered = useMemo(() => {
-    const query = q.trim().toLowerCase()
-    const list = query
-      ? sets.filter(s =>
-          (s.name || '').toLowerCase().includes(query) ||
-          (s.series || '').toLowerCase().includes(query)
-        )
-      : sets
+    const q = query.trim().toLowerCase()
+    if (!q) return sets
+    return sets.filter(s =>
+      String(s.name).toLowerCase().includes(q) ||
+      String(s.series).toLowerCase().includes(q) ||
+      String(s.id).toLowerCase().includes(q)
+    )
+  }, [sets, query])
 
-    // group by series (scrydex vibe: sekcje)
+  const grouped = useMemo(() => {
+    // group by series, keep original (already sorted newest first)
     const map = new Map()
-    for (const s of list) {
+    for (const s of filtered) {
       const key = s.series || 'Other'
       if (!map.has(key)) map.set(key, [])
       map.get(key).push(s)
     }
-
-    // sort sets inside series by releaseDate desc
-    for (const [k, arr] of map.entries()) {
-      arr.sort((a,b) => String(b.releaseDate).localeCompare(String(a.releaseDate)))
-      map.set(k, arr)
-    }
-
-    // series order: by newest set in series
-    const groups = Array.from(map.entries()).sort((a, b) => {
-      const aDate = a[1][0]?.releaseDate || ''
-      const bDate = b[1][0]?.releaseDate || ''
-      return String(bDate).localeCompare(String(aDate))
-    })
-
-    return groups
-  }, [sets, q])
+    return Array.from(map.entries())
+  }, [filtered])
 
   return (
-    <div className="container">
-      <div className="expHeader">
-        <div>
-          <h1 className="h1">Expansions</h1>
-          <p className="p">Browse sets (logos, dates, card counts) — From Alabastia</p>
-        </div>
-        <span className="badge">{sets.length} total</span>
-      </div>
+    <main className="page">
+      <div className="page__header">
+        <h1 className="h1">Pokémon TCG Expansions</h1>
+        <p className="muted">
+          Browse sets like Scrydex-style. Click any expansion to view cards.
+        </p>
 
-      <div className="expControls">
         <input
           className="input"
-          placeholder="Search expansions… (name / series)"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search expansions (name, series, id)..."
         />
       </div>
 
-      {loading && <div className="expMessage">Loading…</div>}
-      {err && <div className="expMessage">Error: {err}</div>}
+      {loading && <div className="center muted">Loading expansions…</div>}
+      {error && <div className="center error">Error: {error}</div>}
 
-      {!loading && !err && filtered.map(([series, items]) => (
-        <section key={series} className="expSection">
-          <div className="expSectionTop">
-            <h2 className="expH2">{series}</h2>
-            <span className="badge">{items.length} sets</span>
+      {!loading && !error && grouped.map(([series, list]) => (
+        <section key={series} className="series">
+          <div className="series__head">
+            <h2 className="h2">{series}</h2>
+            <div className="series__count">{list.length}</div>
           </div>
 
-          <div className="expGrid">
-            {items.map(set => (
-              <Link key={set.id} to={`/set/${set.id}`} className="expCard">
-                <div className="expLogoWrap">
-                  <img className="expLogo" src={set.images?.logo} alt={set.name} loading="lazy" />
+          <div className="grid">
+            {list.map(set => (
+              <Link key={set.id} to={`/pokemon/expansions/${set.id}`} className="set">
+                <div className="set__top">
+                  <img className="set__logo" src={set.images?.logo} alt={set.name} loading="lazy" />
                 </div>
 
-                <div className="expMeta">
-                  <div className="expName">{set.name}</div>
-                  <div className="expSub">
-                    <span>{set.releaseDate || '—'}</span>
-                    <span className="dot" />
-                    <span>{set.total} cards</span>
+                <div className="set__body">
+                  <div className="set__name">{set.name}</div>
+                  <div className="set__meta">
+                    <span className="pill">{set.id}</span>
+                    <span className="pill">{formatDate(set.releaseDate)}</span>
+                    <span className="pill">{set.total} cards</span>
                   </div>
+                </div>
+
+                <div className="set__symbolWrap">
+                  <img className="set__symbol" src={set.images?.symbol} alt="" loading="lazy" />
                 </div>
               </Link>
             ))}
           </div>
         </section>
       ))}
-    </div>
+    </main>
   )
 }

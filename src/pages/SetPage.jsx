@@ -1,85 +1,86 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import '../styles/expansions.css' // użyjemy podobnych klas + minimalnie
+import '../styles/set.css'
+import { slugify } from '../lib/slug.js'
 
 export default function SetPage() {
   const { setId } = useParams()
+
   const [cards, setCards] = useState([])
   const [loading, setLoading] = useState(true)
-  const [err, setErr] = useState(null)
-  const [q, setQ] = useState('')
+  const [error, setError] = useState('')
+  const [query, setQuery] = useState('')
 
   useEffect(() => {
-    ;(async () => {
-      setLoading(true); setErr(null)
+    let alive = true
+    async function run() {
       try {
-        const r = await fetch(`/api/cards?setId=${encodeURIComponent(setId)}`)
-        const json = await r.json()
-        if (!r.ok) throw new Error(json?.error || `HTTP ${r.status}`)
-        setCards(json.data || [])
+        setLoading(true)
+        setError('')
+        const r = await fetch(`/api/tcg?endpoint=cards&setId=${encodeURIComponent(setId)}`)
+        const j = await r.json()
+        if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`)
+        if (alive) setCards(j.data || [])
       } catch (e) {
-        setErr(String(e.message || e))
+        if (alive) setError(String(e.message || e))
       } finally {
-        setLoading(false)
+        if (alive) setLoading(false)
       }
-    })()
+    }
+    run()
+    return () => { alive = false }
   }, [setId])
 
   const filtered = useMemo(() => {
-    const query = q.trim().toLowerCase()
-    if (!query) return cards
+    const q = query.trim().toLowerCase()
+    if (!q) return cards
     return cards.filter(c =>
-      (c.name || '').toLowerCase().includes(query) ||
-      String(c.number || '').toLowerCase().includes(query)
+      String(c.name).toLowerCase().includes(q) ||
+      String(c.number).toLowerCase().includes(q) ||
+      String(c.rarity || '').toLowerCase().includes(q)
     )
-  }, [cards, q])
+  }, [cards, query])
 
   return (
-    <div className="container">
-      <div className="expHeader">
+    <main className="page">
+      <div className="setHead">
         <div>
-          <h1 className="h1">Set: {setId}</h1>
-          <p className="p">{cards.length} cards</p>
+          <div className="breadcrumb">
+            <Link to="/pokemon/expansions" className="breadcrumb__link">← Expansions</Link>
+          </div>
+          <h1 className="h1">Set: <span className="accent">{setId}</span></h1>
+          <p className="muted">{cards.length} cards</p>
         </div>
-        <span className="badge">EN data</span>
-      </div>
 
-      <div className="expControls">
         <input
           className="input"
-          placeholder="Search cards… (name / number)"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search cards (name, number, rarity)..."
         />
       </div>
 
-      {loading && <div className="expMessage">Loading…</div>}
-      {err && <div className="expMessage">Error: {err}</div>}
+      {loading && <div className="center muted">Loading cards…</div>}
+      {error && <div className="center error">Error: {error}</div>}
 
-      {!loading && !err && (
-        <div className="expGrid">
+      {!loading && !error && (
+        <div className="cardGrid">
           {filtered.map(card => {
-            const slug = (card.name || 'card').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g,'')
+            const slug = slugify(card.name)
             return (
               <Link
                 key={card.id}
-                to={`/cards/${slug}/${card.id}?variant=normal`}
-                className="expCard"
+                className="miniCard"
+                to={`/pokemon/cards/${slug}/${card.id}?variant=normal`}
               >
-                <div className="expLogoWrap" style={{height: 180}}>
-                  <img
-                    className="expLogo"
-                    src={card.images?.small}
-                    alt={card.name}
-                    loading="lazy"
-                    style={{maxHeight: 160}}
-                  />
+                <div className="miniCard__imgWrap">
+                  <img className="miniCard__img" src={card.images?.small} alt={card.name} loading="lazy" />
                 </div>
-                <div className="expMeta">
-                  <div className="expName">{card.name}</div>
-                  <div className="expSub">
-                    <span>#{card.number}</span><span className="dot" />
-                    <span>{card.rarity || '—'}</span>
+                <div className="miniCard__body">
+                  <div className="miniCard__name">{card.name}</div>
+                  <div className="miniCard__meta">
+                    <span className="pill">#{card.number}</span>
+                    {card.rarity && <span className="pill">{card.rarity}</span>}
                   </div>
                 </div>
               </Link>
@@ -87,6 +88,6 @@ export default function SetPage() {
           })}
         </div>
       )}
-    </div>
+    </main>
   )
 }

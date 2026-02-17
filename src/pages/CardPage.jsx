@@ -4,124 +4,105 @@ import '../styles/card.css'
 
 export default function CardPage() {
   const { cardId } = useParams()
-  const [sp] = useSearchParams()
-  const variant = sp.get('variant') || 'normal'
+  const [searchParams] = useSearchParams()
+  const variant = searchParams.get('variant') || 'normal'
 
   const [card, setCard] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [err, setErr] = useState(null)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    ;(async () => {
-      setLoading(true); setErr(null)
+    let alive = true
+    async function run() {
       try {
-        // pokemon-tcg-data nie ma endpointu "by id", więc bierzemy z TCG API gdy działa
-        // NA TERAZ: pobierzemy z /api/card?id=... (zrobimy go za chwilę) – poniżej masz wersję prostą:
-        const r = await fetch(`/api/card?id=${encodeURIComponent(cardId)}`)
-        const json = await r.json()
-        if (!r.ok) throw new Error(json?.error || `HTTP ${r.status}`)
-        setCard(json.data)
+        setLoading(true)
+        setError('')
+        const r = await fetch(`/api/tcg?endpoint=card&id=${encodeURIComponent(cardId)}`)
+        const j = await r.json()
+        if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`)
+        if (alive) setCard(j.data)
       } catch (e) {
-        setErr(String(e.message || e))
+        if (alive) setError(String(e.message || e))
       } finally {
-        setLoading(false)
+        if (alive) setLoading(false)
       }
-    })()
+    }
+    run()
+    return () => { alive = false }
   }, [cardId])
 
-  const variants = useMemo(() => {
-    // na start: “normal” zawsze dostępny; resztę dołożymy gdy dodasz dane o wariantach/cenach
-    const base = [{ key: 'normal', label: 'Normal' }]
-    // Jeśli kiedyś dodasz logikę: holo/reverse/1st edition itp., tu tylko dorzucisz:
-    // base.push({ key:'reverse-holo', label:'Reverse Holo' })
-    return base
-  }, [])
+  const setId = card?.set?.id
 
-  if (loading) return <div className="container"><div className="cardMsg">Loading…</div></div>
-  if (err) return <div className="container"><div className="cardMsg">Error: {err}</div></div>
-  if (!card) return <div className="container"><div className="cardMsg">Card not found</div></div>
+  const facts = useMemo(() => {
+    if (!card) return []
+    const out = []
+    out.push(['ID', card.id])
+    out.push(['Set', `${card.set?.name || ''} (${card.set?.id || ''})`])
+    out.push(['Number', card.number])
+    if (card.rarity) out.push(['Rarity', card.rarity])
+    if (card.artist) out.push(['Artist', card.artist])
+    if (card.supertype) out.push(['Supertype', card.supertype])
+    if (card.subtypes?.length) out.push(['Subtypes', card.subtypes.join(', ')])
+    if (card.types?.length) out.push(['Types', card.types.join(', ')])
+    if (card.hp) out.push(['HP', String(card.hp)])
+    if (card.level) out.push(['Level', String(card.level)])
+    if (card.evolvesFrom) out.push(['Evolves from', card.evolvesFrom])
+    if (card.evolvesTo?.length) out.push(['Evolves to', card.evolvesTo.join(', ')])
+    if (card.rules?.length) out.push(['Rules', card.rules.join(' · ')])
+    return out
+  }, [card])
 
   return (
-    <div className="container">
-      <div className="cardTop">
-        <div>
-          <div className="crumbs">
-            <Link to="/expansions">Expansions</Link>
-            <span>›</span>
-            <Link to={`/set/${card.set?.id}`}>{card.set?.name || card.set?.id}</Link>
-            <span>›</span>
-            <span>{card.name}</span>
-          </div>
+    <main className="page">
+      <div className="cardHead">
+        <Link to={setId ? `/pokemon/expansions/${setId}` : '/pokemon/expansions'} className="breadcrumb__link">
+          ← Back to set
+        </Link>
 
-          <h1 className="cardTitle">
-            {card.name}
-            <span className="cardNo"> {card.set?.printedTotal ? `#${card.number}/${card.set.printedTotal}` : `#${card.number}`}</span>
-          </h1>
-
-          <div className="cardSubtitle">
-            <span className="pill">{card.supertype}</span>
-            {card.rarity && <span className="pill">{card.rarity}</span>}
-            {card.set?.series && <span className="pill muted">{card.set.series}</span>}
-          </div>
-        </div>
-
-        <div className="variantBar">
-          {variants.map(v => (
-            <Link
-              key={v.key}
-              to={`?variant=${encodeURIComponent(v.key)}`}
-              className={`variantBtn ${variant === v.key ? 'active' : ''}`}
-            >
-              {v.label}
-            </Link>
-          ))}
+        <div className="cardHead__right">
+          <div className="pill">variant: {variant}</div>
         </div>
       </div>
 
-      <div className="cardLayout">
-        <div className="cardImagePanel">
-          <img
-            className="cardImg"
-            src={card.images?.large || card.images?.small}
-            alt={card.name}
-          />
-          <div className="cardHint">Variant: <b>{variant}</b></div>
-        </div>
+      {loading && <div className="center muted">Loading card…</div>}
+      {error && <div className="center error">Error: {error}</div>}
 
-        <div className="cardInfoPanel">
-          <div className="infoGrid">
-            <Info label="Set" value={card.set?.name} />
-            <Info label="Set ID" value={card.set?.id} />
-            <Info label="Number" value={card.number} />
-            <Info label="Artist" value={card.artist} />
-            <Info label="Rarity" value={card.rarity} />
-            <Info label="Type" value={card.types?.join(', ')} />
-            <Info label="HP" value={card.hp} />
-            <Info label="Regulation" value={card.regulationMark} />
-          </div>
-
-          {card.flavorText && (
-            <div className="flavor">
-              <div className="flavorLabel">Flavor</div>
-              <div className="flavorText">{card.flavorText}</div>
+      {!loading && !error && card && (
+        <div className="cardLayout">
+          <section className="cardLeft">
+            <div className="cardImageWrap">
+              <img className="cardImage" src={card.images?.large} alt={card.name} />
             </div>
-          )}
+          </section>
 
-          <div className="actions">
-            <button className="primaryBtn">Add to collection</button>
-            <button className="ghostBtn">Track price (later)</button>
-          </div>
+          <section className="cardRight">
+            <div className="cardTitle">
+              <h1 className="h1">{card.name}</h1>
+              <div className="muted">{card.set?.name} • #{card.number}</div>
+            </div>
+
+            <div className="facts">
+              {facts.map(([k, v]) => (
+                <div className="fact" key={k}>
+                  <div className="fact__k">{k}</div>
+                  <div className="fact__v">{v}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="actions">
+              {setId && (
+                <Link className="btn" to={`/pokemon/expansions/${setId}`}>
+                  View all cards in set
+                </Link>
+              )}
+              <Link className="btn btn--ghost" to="/pokemon/expansions">
+                Browse expansions
+              </Link>
+            </div>
+          </section>
         </div>
-      </div>
-    </div>
-  )
-}
-
-function Info({ label, value }) {
-  return (
-    <div className="infoCell">
-      <div className="infoLabel">{label}</div>
-      <div className="infoValue">{value || '—'}</div>
-    </div>
+      )}
+    </main>
   )
 }
