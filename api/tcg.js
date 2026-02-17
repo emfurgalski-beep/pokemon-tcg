@@ -1,5 +1,17 @@
-// In-memory cache (resets on cold start)
+// Multiple data sources as fallback
+const BACKUP_SOURCES = [
+  'https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/cards/en.json',
+  'https://cdn.jsdelivr.net/gh/PokemonTCG/pokemon-tcg-data@master/cards/en.json'
+]
+
+const SETS_SOURCES = [
+  'https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/sets/en.json',
+  'https://cdn.jsdelivr.net/gh/PokemonTCG/pokemon-tcg-data@master/sets/en.json'
+]
+
+// In-memory cache
 let setsCache = null
+let cardsCache = null
 let cacheTime = null
 const CACHE_DURATION = 6 * 60 * 60 * 1000 // 6 hours
 
@@ -8,33 +20,27 @@ function setHeaders(res, seconds = 3600) {
   res.setHeader('Access-Control-Allow-Origin', '*')
 }
 
-async function fetchWithRetry(url, tries = 3) {
-  let lastErr
-  for (let i = 0; i < tries; i++) {
+async function fetchFromSources(sources) {
+  for (const url of sources) {
     try {
-      const headers = { 'Accept': 'application/json' }
+      console.log(`Trying ${url}`)
+      const r = await fetch(url, {
+        headers: { 'Accept': 'application/json' }
+      })
       
-      // Add API key if available
-      if (process.env.TCG_API_KEY) {
-        headers['X-Api-Key'] = process.env.TCG_API_KEY
+      if (r.ok) {
+        const data = await r.json()
+        console.log(`✓ Success from ${url}`)
+        return data
       }
       
-      const r = await fetch(url, { headers })
-      
-      if (!r.ok) {
-        const text = await r.text()
-        console.error(`HTTP ${r.status}:`, text)
-        throw new Error(`HTTP ${r.status}`)
-      }
-      
-      return await r.json()
+      console.log(`✗ Failed ${url}: HTTP ${r.status}`)
     } catch (e) {
-      lastErr = e
-      console.error(`Attempt ${i + 1} failed for ${url}:`, e.message)
-      if (i < tries - 1) await new Promise(r => setTimeout(r, 500 * Math.pow(2, i)))
+      console.log(`✗ Failed ${url}:`, e.message)
     }
   }
-  throw lastErr
+  
+  throw new Error('All data sources failed')
 }
 
 async function loadAllSets() {
@@ -43,10 +49,20 @@ async function loadAllSets() {
     return setsCache
   }
 
-  const data = await fetchWithRetry('https://api.pokemontcg.io/v2/sets?orderBy=-releaseDate')
-  setsCache = data.data
+  setsCache = await fetchFromSources(SETS_SOURCES)
   cacheTime = now
   return setsCache
+}
+
+async function loadAllCards() {
+  const now = Date.now()
+  if (cardsCache && cacheTime && (now - cacheTime < CACHE_DURATION)) {
+    return cardsCache
+  }
+
+  cardsCache = await fetchFromSources(BACKUP_SOURCES)
+  cacheTime = now
+  return cardsCache
 }
 
 export default async function handler(req, res) {
@@ -71,13 +87,11 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Missing setId' })
       }
 
-      // Query pokemontcg.io API with set filter
-      const data = await fetchWithRetry(
-        `https://api.pokemontcg.io/v2/cards?q=set.id:${setId}&pageSize=250`
-      )
+      const allCards = await loadAllCards()
+      const filtered = allCards.filter(c => c?.set?.id === setId)
       
       setHeaders(res, 60 * 60)
-      return res.status(200).json({ data: data.data })
+      return res.status(200).json({ data: filtered })
     }
 
     // Single card
@@ -87,16 +101,24 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Missing id' })
       }
 
-      const data = await fetchWithRetry(`https://api.pokemontcg.io/v2/cards/${id}`)
+      const allCards = await loadAllCards()
+      const card = allCards.find(c => c?.id === id)
+      
+      if (!card) {
+        return res.status(404).json({ error: 'Card not found' })
+      }
       
       setHeaders(res, 60 * 60)
-      return res.status(200).json({ data: data.data })
+      return res.status(200).json({ data: card })
     }
 
     // Health
     if (endpoint === 'ping') {
       setHeaders(res, 60)
-      return res.status(200).json({ ok: true, cached: !!setsCache })
+      return res.status(200).json({ 
+        ok: true, 
+        cached: !!(setsCache && cardsCache)
+      })
     }
 
     return res.status(400).json({
