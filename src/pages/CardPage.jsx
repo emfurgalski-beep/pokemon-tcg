@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
+import '../styles/card.css'
 
 export default function CardPage() {
   const { cardId } = useParams()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const variant = searchParams.get('variant') || 'normal'
 
   const [card, setCard] = useState(null)
@@ -39,7 +40,6 @@ export default function CardPage() {
 
   const facts = useMemo(() => {
     if (!card) return []
-
     const out = []
     out.push(['Card ID', card.id])
     if (card.set?.name) out.push(['Set', `${card.set.name} (${card.set.id})`])
@@ -55,142 +55,89 @@ export default function CardPage() {
     return out
   }, [card])
 
+  function setVariant(next) {
+    setSearchParams(prev => {
+      const p = new URLSearchParams(prev)
+      p.set('variant', next)
+      return p
+    })
+  }
+
   return (
-    <div style={{ padding: 24, maxWidth: 1100, margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+    <main className="page">
+      <div className="cardHead">
         <Link
           to={setId ? `/pokemon/expansions/${setId}` : '/pokemon/expansions'}
-          style={{ opacity: 0.85, fontWeight: 700, textDecoration: 'none' }}
+          className="breadcrumbLink"
         >
           ← Back to set
         </Link>
 
-        <div style={{
-          border: '1px solid #2a2d3a',
-          background: '#0f1117',
-          padding: '6px 10px',
-          borderRadius: 999,
-          fontSize: 12,
-          fontWeight: 800,
-          opacity: 0.9
-        }}>
-          variant: {variant}
+        <div className="cardHeadRight">
+          <div className="variantTabs" role="tablist" aria-label="Variant">
+            <button className={`tab ${variant === 'normal' ? 'tabActive' : ''}`} onClick={() => setVariant('normal')}>
+              Normal
+            </button>
+            <button className={`tab ${variant === 'holo' ? 'tabActive' : ''}`} onClick={() => setVariant('holo')}>
+              Holo
+            </button>
+            <button className={`tab ${variant === 'reverse' ? 'tabActive' : ''}`} onClick={() => setVariant('reverse')}>
+              Reverse
+            </button>
+          </div>
+
+          <span className="pill">variant: {variant}</span>
         </div>
       </div>
 
-      {loading && <div>Loading card…</div>}
-      {error && <div style={{ color: '#ff9090' }}>Error: {error}</div>}
+      {loading && <div className="center muted">Loading card…</div>}
+      {error && <div className="center error">Error: {error}</div>}
 
       {!loading && !error && card && (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: 16
-        }}>
-          {/* LEFT: Image */}
-          <div style={{
-            border: '1px solid #2a2d3a',
-            borderRadius: 14,
-            background: '#171b26',
-            padding: 14,
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center'
-          }}>
-            <div style={{
-              width: '100%',
-              border: '1px solid #2a2d3a',
-              borderRadius: 12,
-              background: '#0f1117',
-              padding: 14,
-              display: 'flex',
-              justifyContent: 'center'
-            }}>
-              <img
-                src={card.images?.large || card.images?.small}
-                alt={card.name}
-                style={{ width: 'min(420px, 100%)', height: 'auto', objectFit: 'contain', filter: 'drop-shadow(0 16px 28px rgba(0,0,0,.45))' }}
-              />
+        <div className="cardLayout">
+          {/* LEFT */}
+          <section className="cardPanel">
+            <div className="cardImgWrap">
+              <div className="cardImgFrame">
+                <img className="cardImg" src={card.images?.large || card.images?.small} alt={card.name} />
+              </div>
             </div>
-          </div>
+          </section>
 
-          {/* RIGHT: Info */}
-          <div style={{
-            border: '1px solid #2a2d3a',
-            borderRadius: 14,
-            background: '#171b26',
-            padding: 16
-          }}>
-            <h1 style={{ margin: '0 0 6px' }}>{card.name}</h1>
-            <div style={{ opacity: 0.8, marginBottom: 14 }}>
-              {card.set?.name} • #{card.number}
-            </div>
+          {/* RIGHT */}
+          <section className="cardPanel">
+            <div className="cardInfo">
+              <h1 className="cardTitle">{card.name}</h1>
 
-            <div style={{ display: 'grid', gap: 10 }}>
-              {facts.map(([k, v]) => (
-                <div key={k} style={{
-                  border: '1px solid #2a2d3a',
-                  borderRadius: 12,
-                  padding: '10px 12px',
-                  background: '#0f1117'
-                }}>
-                  <div style={{ fontSize: 11, fontWeight: 900, opacity: 0.75, letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 6 }}>
-                    {k}
+              <div className="cardSub">
+                {card.set?.name && <span>{card.set.name}</span>}
+                {card.number && <><span>•</span><span>#{card.number}</span></>}
+                {card.rarity && <><span>•</span><span>{card.rarity}</span></>}
+              </div>
+
+              <div className="factGrid">
+                {facts.map(([k, v]) => (
+                  <div className="fact" key={k}>
+                    <div className="factLabel">{k}</div>
+                    <div className="factValue">{v}</div>
                   </div>
-                  <div style={{ fontWeight: 800 }}>{v}</div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 14 }}>
-              {setId && (
-                <Link
-                  to={`/pokemon/expansions/${setId}`}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '10px 12px',
-                    borderRadius: 12,
-                    border: '1px solid rgba(245,200,66,.35)',
-                    background: 'rgba(245,200,66,.10)',
-                    fontWeight: 900,
-                    textDecoration: 'none'
-                  }}
-                >
-                  View all cards in set
+              <div className="cardActions">
+                {setId && (
+                  <Link className="btn btnAccent" to={`/pokemon/expansions/${setId}`}>
+                    View all cards in set
+                  </Link>
+                )}
+                <Link className="btn" to="/pokemon/expansions">
+                  Browse expansions
                 </Link>
-              )}
-
-              <Link
-                to="/pokemon/expansions"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '10px 12px',
-                  borderRadius: 12,
-                  border: '1px solid #2a2d3a',
-                  background: '#0f1117',
-                  fontWeight: 900,
-                  textDecoration: 'none'
-                }}
-              >
-                Browse expansions
-              </Link>
+              </div>
             </div>
-          </div>
-
-          {/* responsive simple */}
-          <style>{`
-            @media (max-width: 900px) {
-              div[style*="gridTemplateColumns: '1fr 1fr'"] {
-                grid-template-columns: 1fr !important;
-              }
-            }
-          `}</style>
+          </section>
         </div>
       )}
-    </div>
+    </main>
   )
 }
