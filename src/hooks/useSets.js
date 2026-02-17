@@ -3,9 +3,10 @@ import { useState, useEffect } from 'react'
 const API_KEY = import.meta.env.VITE_TCG_API_KEY
 
 function useSets() {
-  const [sets, setSets]       = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError]     = useState(null)
+ const response = await fetch('/api/sets')
+ const json = await response.json()
+setSets(json.data)
+
 
   useEffect(() => {
     async function fetchSets() {
