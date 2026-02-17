@@ -6,17 +6,45 @@ import '../styles/set.css'
 export default function SetPage() {
   const { setId } = useParams()
 
+  const [setInfo, setSetInfo] = useState(null)
+
   const [cards, setCards] = useState([])
   const [query, setQuery] = useState('')
-  const [loading, setLoading] = useState(true)
+  const [loadingCards, setLoadingCards] = useState(true)
+  const [loadingSet, setLoadingSet] = useState(true)
   const [error, setError] = useState('')
 
+  // 1) Load set info (name, series, logo, releaseDate, etc.)
   useEffect(() => {
     let alive = true
 
-    async function load() {
+    async function loadSet() {
       try {
-        setLoading(true)
+        setLoadingSet(true)
+        const r = await fetch('/api/tcg?endpoint=sets')
+        const j = await r.json()
+        if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`)
+        const found = (j.data || []).find(s => s?.id === setId)
+        if (alive) setSetInfo(found || null)
+      } catch (e) {
+        // set header can still work without setInfo, so we don't hard-fail here
+        console.error(e)
+      } finally {
+        if (alive) setLoadingSet(false)
+      }
+    }
+
+    loadSet()
+    return () => { alive = false }
+  }, [setId])
+
+  // 2) Load cards for this set
+  useEffect(() => {
+    let alive = true
+
+    async function loadCards() {
+      try {
+        setLoadingCards(true)
         setError('')
         setCards([])
 
@@ -28,11 +56,11 @@ export default function SetPage() {
       } catch (e) {
         if (alive) setError(String(e.message || e))
       } finally {
-        if (alive) setLoading(false)
+        if (alive) setLoadingCards(false)
       }
     }
 
-    load()
+    loadCards()
     return () => { alive = false }
   }, [setId])
 
@@ -46,29 +74,65 @@ export default function SetPage() {
     )
   }, [cards, query])
 
+  const title = setInfo?.name || `Set: ${setId}`
+  const series = setInfo?.series
+  const date = setInfo?.releaseDate
+  const total = setInfo?.total ?? cards.length
+  const ptcgo = setInfo?.ptcgoCode
+
   return (
     <main className="page">
-      <div className="setHead">
-        <div>
-          <Link to="/pokemon/expansions" className="breadcrumbLink">← Back to expansions</Link>
-          <h1 className="h1" style={{ marginTop: 10 }}>Set: <span className="accent">{setId}</span></h1>
-          <div className="muted">
-            {loading ? 'Loading…' : `${filtered.length} / ${cards.length} cards`}
-          </div>
+      <Link to="/pokemon/expansions" className="breadcrumbLink">← Back to expansions</Link>
+
+      {/* SCRYDEX-LIKE HEADER */}
+      <section className="setHero">
+        <div className="setHero__left">
+          {setInfo?.images?.logo ? (
+            <img className="setHero__logo" src={setInfo.images.logo} alt={title} />
+          ) : (
+            <div className="setHero__logoFallback">{setId}</div>
+          )}
         </div>
 
+        <div className="setHero__right">
+          <div className="setHero__titleRow">
+            <h1 className="setHero__title">{title}</h1>
+            {ptcgo && <span className="setHero__badge">{ptcgo}</span>}
+          </div>
+
+          <div className="setHero__meta">
+            {/* usunęliśmy setId z UI, ale jeśli chcesz możesz go tu dodać jako pill */}
+            {series && <span>{series}</span>}
+            <span>•</span>
+            <span>{total} cards</span>
+            {date && (
+              <>
+                <span>•</span>
+                <span>Released {date}</span>
+              </>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Search */}
+      <div className="setTools">
         <input
           className="input"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search cards (name, number, rarity)…"
         />
+
+        <div className="muted setTools__count">
+          {loadingCards ? 'Loading…' : `${filtered.length} / ${cards.length} cards`}
+        </div>
       </div>
 
-      {loading && <div className="center muted">Loading cards…</div>}
+      {loadingCards && <div className="center muted">Loading cards…</div>}
       {error && <div className="center error">Error: {error}</div>}
 
-      {!loading && !error && (
+      {!loadingCards && !error && (
         <div className="cardGrid">
           {filtered.map(card => {
             const slug = slugify(card.name)
@@ -94,6 +158,9 @@ export default function SetPage() {
           })}
         </div>
       )}
+
+      {/* optional tiny helper */}
+      {loadingSet && <div style={{ height: 0 }} />}
     </main>
   )
 }
