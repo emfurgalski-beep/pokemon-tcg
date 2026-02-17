@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 
 const API_KEY = import.meta.env.VITE_TCG_API_KEY
-console.log('API KEY:', API_KEY)
 
 function useSets() {
   const [sets, setSets]       = useState([])
@@ -15,10 +14,17 @@ function useSets() {
           'https://api.pokemontcg.io/v2/sets?orderBy=-releaseDate',
           { headers: { 'X-Api-Key': API_KEY } }
         )
+
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`)
+        }
+
         const data = await response.json()
         setSets(data.data)
+
       } catch (err) {
-        setError('Failed to load sets. Please try again.')
+        setError(`Failed to load sets: ${err.message}`)
+        console.error(err)
       } finally {
         setLoading(false)
       }
