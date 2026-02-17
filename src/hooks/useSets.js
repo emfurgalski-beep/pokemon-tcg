@@ -10,10 +10,7 @@ function useSets() {
   useEffect(() => {
     async function fetchSets() {
       try {
-        const response = await fetch(
-          'https://api.pokemontcg.io/v2/sets?orderBy=-releaseDate',
-          { headers: { 'X-Api-Key': API_KEY } }
-        )
+        const response = await fetch('/api/sets')
 
         if (!response.ok) {
           throw new Error(`API error: ${response.status}`)
