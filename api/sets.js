@@ -1,30 +1,28 @@
 export default async function handler(req, res) {
   try {
-    const response = await fetch(
-      'https://api.pokemontcg.io/v2/sets?orderBy=-releaseDate',
-      {
-        method: 'GET',
-        headers: {
-          'X-Api-Key': process.env.TCG_API_KEY,
-          'Content-Type': 'application/json'
-        }
-      }
-    )
+    const url = 'https://api.pokemontcg.io/v2/sets?orderBy=-releaseDate&pageSize=50'
 
-    const text = await response.text()
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'X-Api-Key': process.env.TCG_API_KEY,
+        'Accept': 'application/json',
+      },
+    })
 
-    if (!response.ok) {
-      return res.status(500).json({
-        status: response.status,
-        body: text
-      })
-    }
+    const bodyText = await response.text()
 
-    const data = JSON.parse(text)
-    res.setHeader('Access-Control-Allow-Origin', '*')
-    res.status(200).json(data)
-
+    // pokażemy Ci dokładnie co zwraca serwer
+    res.status(200).json({
+      ok: response.ok,
+      status: response.status,
+      statusText: response.statusText,
+      contentType: response.headers.get('content-type'),
+      // utnijmy, żeby nie zalać ekranu
+      bodyPreview: bodyText.slice(0, 800),
+      url,
+    })
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    res.status(200).json({ ok: false, error: String(err) })
   }
 }
