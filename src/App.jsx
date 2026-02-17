@@ -1,18 +1,19 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Navbar from './components/Navbar'
-import SetsPage from './pages/SetsPage'
-import SetDetailPage from './pages/SetDetailPage'
+import ExpansionsPage from './pages/ExpansionsPage'
+import CardPage from './pages/CardPage'
+import SetPage from './pages/SetPage'
 
-function App() {
+export default function App() {
   return (
     <BrowserRouter>
       <Navbar />
       <Routes>
-        <Route path="/" element={<SetsPage />} />
-        <Route path="/set/:setId" element={<SetDetailPage />} />
+        <Route path="/" element={<Navigate to="/expansions" />} />
+        <Route path="/expansions" element={<ExpansionsPage />} />
+        <Route path="/set/:setId" element={<SetPage />} />
+        <Route path="/cards/:name/:cardId" element={<CardPage />} />
       </Routes>
     </BrowserRouter>
   )
 }
-
-export default App
