@@ -1,3 +1,5 @@
+// From Alabastia API
+
 const CARDS_URL =
   'https://cdn.jsdelivr.net/gh/PokemonTCG/pokemon-tcg-data@master/cards/en.json'
 
