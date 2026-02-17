@@ -2,7 +2,7 @@ export default async function handler(req, res) {
   try {
     const response = await fetch(
       'https://api.pokemontcg.io/v2/sets?orderBy=-releaseDate',
-      { headers: { 'X-Api-Key': process.env.VITE_TCG_API_KEY } }
+      { headers: { 'X-Api-Key': process.env.TCG_API_KEY } }
     )
 
     if (!response.ok) {
