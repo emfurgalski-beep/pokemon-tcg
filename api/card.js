@@ -1,23 +1,22 @@
+const CARDS_URL =
+  'https://cdn.jsdelivr.net/gh/PokemonTCG/pokemon-tcg-data@master/cards/en.json'
+
 export default async function handler(req, res) {
   try {
-    const { setId } = req.query
-    if (!setId) return res.status(400).json({ error: 'Missing setId' })
+    const id = req.query.id
+    if (!id) return res.status(400).json({ error: 'Missing id' })
 
-    // Wszystkie karty EN (duży plik) – ale CDN + cache robi robotę
-    const url =
-      'https://cdn.jsdelivr.net/gh/PokemonTCG/pokemon-tcg-data@master/cards/en.json'
-
-    const r = await fetch(url)
-    if (!r.ok) throw new Error(`cards source error: ${r.status}`)
+    const r = await fetch(CARDS_URL)
+    if (!r.ok) return res.status(502).json({ error: `Cards source error: ${r.status}` })
 
     const cards = await r.json()
 
-    // filtr po set.id
-    const filtered = cards.filter(c => c?.set?.id === setId)
+    const card = cards.find(c => c.id === id)
+    if (!card) return res.status(404).json({ error: 'Card not found' })
 
     res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
-    res.status(200).json({ data: filtered })
+    return res.status(200).json({ data: card })
   } catch (err) {
-    res.status(500).json({ error: String(err?.message || err) })
+    return res.status(500).json({ error: String(err?.message || err) })
   }
 }
