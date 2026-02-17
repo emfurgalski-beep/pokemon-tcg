@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { slugify } from '../lib/slug'
+import '../styles/set.css'
 
 export default function SetPage() {
   const { setId } = useParams()
@@ -46,70 +47,46 @@ export default function SetPage() {
   }, [cards, query])
 
   return (
-    <div style={{ padding: 24, maxWidth: 1100, margin: '0 auto' }}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 18 }}>
+    <main className="page">
+      <div className="setHead">
         <div>
-          <Link to="/pokemon/expansions" style={{ opacity: 0.8, fontWeight: 700, textDecoration: 'none' }}>
-            ← Back to expansions
-          </Link>
-          <h1 style={{ margin: '10px 0 6px' }}>Set: {setId}</h1>
-          <div style={{ opacity: 0.8 }}>
+          <Link to="/pokemon/expansions" className="breadcrumbLink">← Back to expansions</Link>
+          <h1 className="h1" style={{ marginTop: 10 }}>Set: <span className="accent">{setId}</span></h1>
+          <div className="muted">
             {loading ? 'Loading…' : `${filtered.length} / ${cards.length} cards`}
           </div>
         </div>
 
         <input
+          className="input"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search cards (name, number, rarity)…"
-          style={{
-            width: '100%',
-            maxWidth: 520,
-            padding: '10px 12px',
-            borderRadius: 10,
-            border: '1px solid #2a2d3a',
-            background: '#12151e',
-            color: '#e8e8f0',
-            outline: 'none'
-          }}
         />
       </div>
 
-      {loading && <div>Loading cards…</div>}
-      {error && <div style={{ color: '#ff9090' }}>Error: {error}</div>}
+      {loading && <div className="center muted">Loading cards…</div>}
+      {error && <div className="center error">Error: {error}</div>}
 
       {!loading && !error && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(170px,1fr))', gap: 14 }}>
+        <div className="cardGrid">
           {filtered.map(card => {
             const slug = slugify(card.name)
             return (
               <Link
                 key={card.id}
+                className="miniCard"
                 to={`/pokemon/cards/${slug}/${card.id}?variant=normal`}
-                style={{
-                  display: 'block',
-                  border: '1px solid #2a2d3a',
-                  borderRadius: 14,
-                  background: '#171b26',
-                  overflow: 'hidden',
-                  textDecoration: 'none',
-                  color: 'inherit'
-                }}
               >
-                <div style={{ background: '#0f1117', borderBottom: '1px solid #2a2d3a', padding: 10, display: 'flex', justifyContent: 'center' }}>
-                  <img
-                    src={card.images?.small}
-                    alt={card.name}
-                    loading="lazy"
-                    style={{ width: '100%', height: 180, objectFit: 'contain' }}
-                  />
+                <div className="miniImgWrap">
+                  <img className="miniImg" src={card.images?.small} alt={card.name} loading="lazy" />
                 </div>
 
-                <div style={{ padding: '10px 10px 12px' }}>
-                  <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 8 }}>{card.name}</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, opacity: 0.85, fontSize: 12 }}>
-                    <span>#{card.number}</span>
-                    {card.rarity && <span>• {card.rarity}</span>}
+                <div className="miniBody">
+                  <div className="miniName">{card.name}</div>
+                  <div className="miniMeta">
+                    <span className="pill">#{card.number}</span>
+                    {card.rarity && <span className="pill">{card.rarity}</span>}
                   </div>
                 </div>
               </Link>
@@ -117,6 +94,6 @@ export default function SetPage() {
           })}
         </div>
       )}
-    </div>
+    </main>
   )
 }
