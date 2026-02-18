@@ -38,6 +38,11 @@ async function loadAllSets() {
       batch.map(async (s) => {
         try {
           const full = await fetchTCGdex(`sets/${s.id}`)
+          
+          // Use Scrydex images (more reliable and complete)
+          const scrydexLogo = `https://images.scrydex.com/pokemon/${s.id}-logo/logo`
+          const scrydexSymbol = `https://images.scrydex.com/pokemon/${s.id}-symbol/symbol`
+          
           return {
             id: full.id,
             name: full.name,
@@ -47,13 +52,14 @@ async function loadAllSets() {
             releaseDate: full.releaseDate, // "1999/01/09"
             ptcgoCode: full.tcgOnline,
             images: {
-              // TCGdex URLs don't have extension in API response
-              logo: full.logo || null,
-              symbol: full.symbol || null
+              // Try Scrydex first (more complete), fallback to TCGdex
+              logo: scrydexLogo,
+              symbol: scrydexSymbol
             }
           }
         } catch (e) {
           // Fallback to basic info from list
+          const scrydexLogo = `https://images.scrydex.com/pokemon/${s.id}-logo/logo`
           return {
             id: s.id,
             name: s.name,
@@ -62,7 +68,7 @@ async function loadAllSets() {
             total: s.cardCount?.total || 0,
             releaseDate: null,
             images: {
-              logo: s.logo || null,
+              logo: scrydexLogo,
               symbol: null
             }
           }
