@@ -55,17 +55,20 @@ export default function SetPage() {
     }
   }
 
-  // Group cards by name to detect variants
+  // Group cards by number to detect variants
   const cardsWithVariants = useMemo(() => {
     if (showVariants) {
       // Show all cards individually
       return cards.map(card => ({ ...card, variantCount: 0 }))
     }
 
-    // Group by name and show only first variant
+    // Group by card number (base number without letter suffix)
     const grouped = new Map()
     cards.forEach(card => {
-      const key = card.name
+      // Extract base number (e.g., "1" from "1", "1a", "1b")
+      const baseNumber = card.number?.replace(/[a-zA-Z]+$/, '') || card.number
+      const key = `${card.name}-${baseNumber}` // Combine name + base number for unique grouping
+      
       if (!grouped.has(key)) {
         grouped.set(key, [])
       }
@@ -75,14 +78,27 @@ export default function SetPage() {
     // Return first card from each group with variant count
     const result = []
     grouped.forEach(variants => {
-      const firstCard = variants[0]
+      // Sort variants by number (so "1" comes before "1a", "1b")
+      const sorted = variants.sort((a, b) => {
+        const numA = a.number || ''
+        const numB = b.number || ''
+        return numA.localeCompare(numB, undefined, { numeric: true })
+      })
+      
+      const firstCard = sorted[0]
       result.push({
         ...firstCard,
-        variantCount: variants.length > 1 ? variants.length : 0
+        variantCount: variants.length > 1 ? variants.length : 0,
+        allVariants: variants.length > 1 ? variants : null
       })
     })
 
-    return result
+    // Sort result by number
+    return result.sort((a, b) => {
+      const numA = a.number || ''
+      const numB = b.number || ''
+      return numA.localeCompare(numB, undefined, { numeric: true })
+    })
   }, [cards, showVariants])
 
   const filteredCards = cardsWithVariants.filter(card => {
