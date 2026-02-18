@@ -105,12 +105,28 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Invalid card ID format' })
       }
 
+      // Load sets to get full set info
+      const sets = await fetchWithRetry(SETS_URL)
+      const setInfo = sets.find(s => s.id === setId)
+
       const cardsUrl = getCardsUrl(setId)
       const cards = await fetchWithRetry(cardsUrl)
       const card = cards.find(c => c?.id === cardId)
       
       if (!card) {
         return res.status(404).json({ error: 'Card not found' })
+      }
+
+      // Add full set info to card if we found it
+      if (setInfo) {
+        card.set = {
+          id: setInfo.id,
+          name: setInfo.name,
+          series: setInfo.series,
+          total: setInfo.total,
+          releaseDate: setInfo.releaseDate,
+          images: setInfo.images
+        }
       }
       
       setCacheHeaders(res, 60 * 60) // Cache 1 hour
