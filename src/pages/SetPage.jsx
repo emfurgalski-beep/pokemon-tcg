@@ -10,6 +10,7 @@ export default function SetPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [selectedType, setSelectedType] = useState(null)
 
   useEffect(() => {
     loadSetData()
@@ -54,13 +55,24 @@ export default function SetPage() {
   }
 
   const filteredCards = cards.filter(card => {
-    if (!searchQuery) return true
-    const query = searchQuery.toLowerCase()
-    return (
-      card.name?.toLowerCase().includes(query) ||
-      card.number?.toString().includes(query) ||
-      card.rarity?.toLowerCase().includes(query)
-    )
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      const matchesSearch = (
+        card.name?.toLowerCase().includes(query) ||
+        card.number?.toString().includes(query) ||
+        card.rarity?.toLowerCase().includes(query)
+      )
+      if (!matchesSearch) return false
+    }
+
+    // Filter by selected type
+    if (selectedType) {
+      const hasType = card.types?.includes(selectedType)
+      if (!hasType) return false
+    }
+
+    return true
   })
 
   // Calculate type breakdown for Pokemon cards
@@ -131,13 +143,27 @@ export default function SetPage() {
         {/* Type Breakdown */}
         {typeBreakdown.length > 0 && (
           <div className="type-breakdown">
-            <h3 className="breakdown-title">Type Distribution</h3>
+            <div className="breakdown-header">
+              <h3 className="breakdown-title">Type Distribution</h3>
+              {selectedType && (
+                <button 
+                  onClick={() => setSelectedType(null)} 
+                  className="clear-type-button"
+                >
+                  Clear Filter
+                </button>
+              )}
+            </div>
             <div className="type-grid">
               {typeBreakdown.map(([type, count]) => (
-                <div key={type} className="type-badge">
+                <button
+                  key={type}
+                  onClick={() => setSelectedType(selectedType === type ? null : type)}
+                  className={`type-badge ${selectedType === type ? 'active' : ''}`}
+                >
                   <span className="type-name">{type}</span>
                   <span className="type-count">{count}</span>
-                </div>
+                </button>
               ))}
             </div>
           </div>
