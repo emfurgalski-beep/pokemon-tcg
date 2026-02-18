@@ -3,7 +3,11 @@
 // CDN: cdn.jsdelivr.net (fast, global, no CORS issues)
 
 const SETS_URL = 'https://cdn.jsdelivr.net/gh/PokemonTCG/pokemon-tcg-data@master/sets/en.json'
-const CARDS_URL = 'https://cdn.jsdelivr.net/gh/PokemonTCG/pokemon-tcg-data@master/cards/en.json'
+
+// Cards are stored per-set, not in one big file
+function getCardsUrl(setId) {
+  return `https://cdn.jsdelivr.net/gh/PokemonTCG/pokemon-tcg-data@master/cards/en/${setId}.json`
+}
 
 function setCacheHeaders(res, seconds = 3600) {
   res.setHeader('Cache-Control', `public, s-maxage=${seconds}, stale-while-revalidate=86400`)
@@ -79,11 +83,11 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Missing setId parameter' })
       }
 
-      const allCards = await fetchWithRetry(CARDS_URL)
-      const setCards = allCards.filter(card => card?.set?.id === setId)
+      const cardsUrl = getCardsUrl(setId)
+      const cards = await fetchWithRetry(cardsUrl)
       
       setCacheHeaders(res, 60 * 60) // Cache 1 hour
-      return res.status(200).json({ data: setCards })
+      return res.status(200).json({ data: cards })
     }
 
     // Get single card by ID
@@ -94,8 +98,16 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Missing id parameter' })
       }
 
-      const allCards = await fetchWithRetry(CARDS_URL)
-      const card = allCards.find(c => c?.id === cardId)
+      // Extract set ID from card ID (format: setId-cardNumber, e.g., "base1-4")
+      const setId = cardId.split('-')[0]
+      
+      if (!setId) {
+        return res.status(400).json({ error: 'Invalid card ID format' })
+      }
+
+      const cardsUrl = getCardsUrl(setId)
+      const cards = await fetchWithRetry(cardsUrl)
+      const card = cards.find(c => c?.id === cardId)
       
       if (!card) {
         return res.status(404).json({ error: 'Card not found' })
