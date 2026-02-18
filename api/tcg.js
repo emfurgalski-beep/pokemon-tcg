@@ -91,6 +91,10 @@ function convertTCGdexCard(card, setId) {
 
 // Try all sources for sets
 async function fetchSets() {
+  // TEMPORARY: Skip pokemontcg.io and TCGdex until they're stable
+  // TODO: Re-enable when APIs are working
+  
+  /* Disabled temporarily
   // Try pokemontcg.io first
   try {
     console.log('[API] Trying pokemontcg.io for sets...')
@@ -144,10 +148,11 @@ async function fetchSets() {
   } catch (error) {
     console.warn('[API] TCGdex failed:', error.message)
   }
+  */
 
-  // Fallback to GitHub CDN
+  // Use GitHub CDN (stable, no variants)
   try {
-    console.log('[API] Falling back to GitHub CDN...')
+    console.log('[API] Using GitHub CDN (stable source)...')
     const sets = await fetchWithTimeout(GITHUB_CDN_SETS)
     
     const enhanced = sets.map(set => ({
@@ -162,13 +167,17 @@ async function fetchSets() {
     return { data: enhanced, source: 'github-cdn' }
     
   } catch (error) {
-    console.error('[API] All sources failed')
+    console.error('[API] GitHub CDN failed')
     throw new Error('All data sources unavailable')
   }
 }
 
 // Try all sources for cards
 async function fetchCards(setId) {
+  // TEMPORARY: Skip pokemontcg.io and TCGdex until they're stable
+  // Use GitHub CDN only for now
+  
+  /* Disabled temporarily
   // Try pokemontcg.io first
   try {
     console.log(`[API] Trying pokemontcg.io for cards (set: ${setId})...`)
@@ -202,17 +211,18 @@ async function fetchCards(setId) {
   } catch (error) {
     console.warn(`[API] TCGdex failed:`, error.message)
   }
+  */
 
-  // Fallback to GitHub CDN
+  // Use GitHub CDN (stable, no variants)
   try {
-    console.log(`[API] Falling back to GitHub CDN...`)
+    console.log(`[API] Using GitHub CDN for cards...`)
     const cards = await fetchWithTimeout(getGithubCardsUrl(setId))
     console.log(`[API] GitHub CDN success: ${cards.length} cards (no variants)`)
     return { data: cards, source: 'github-cdn', hasVariants: false }
     
   } catch (error) {
-    console.error('[API] All sources failed')
-    throw new Error('All data sources unavailable')
+    console.error('[API] GitHub CDN failed')
+    throw new Error('Card data unavailable')
   }
 }
 
