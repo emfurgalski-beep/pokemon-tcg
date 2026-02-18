@@ -11,6 +11,7 @@ export default function SetPage() {
   const [error, setError] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedType, setSelectedType] = useState(null)
+  const [showVariants, setShowVariants] = useState(false)
 
   useEffect(() => {
     loadSetData()
@@ -54,7 +55,37 @@ export default function SetPage() {
     }
   }
 
-  const filteredCards = cards.filter(card => {
+  // Group cards by name to detect variants
+  const cardsWithVariants = useMemo(() => {
+    if (showVariants) {
+      // Show all cards individually
+      return cards.map(card => ({ ...card, variantCount: 0 }))
+    }
+
+    // Group by name and show only first variant
+    const grouped = new Map()
+    cards.forEach(card => {
+      const key = card.name
+      if (!grouped.has(key)) {
+        grouped.set(key, [])
+      }
+      grouped.get(key).push(card)
+    })
+
+    // Return first card from each group with variant count
+    const result = []
+    grouped.forEach(variants => {
+      const firstCard = variants[0]
+      result.push({
+        ...firstCard,
+        variantCount: variants.length > 1 ? variants.length : 0
+      })
+    })
+
+    return result
+  }, [cards, showVariants])
+
+  const filteredCards = cardsWithVariants.filter(card => {
     // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
@@ -77,7 +108,7 @@ export default function SetPage() {
 
   // Calculate type breakdown for Pokemon cards
   const typeBreakdown = useMemo(() => {
-    const pokemonCards = cards.filter(c => c.supertype === 'Pokémon')
+    const pokemonCards = cardsWithVariants.filter(c => c.supertype === 'Pokémon')
     const breakdown = {}
     
     pokemonCards.forEach(card => {
@@ -91,7 +122,7 @@ export default function SetPage() {
     return Object.entries(breakdown)
       .sort((a, b) => b[1] - a[1]) // Sort by count descending
       .slice(0, 8) // Top 8 types
-  }, [cards])
+  }, [cardsWithVariants])
 
   if (loading) {
     return <div className="loading">Loading set...</div>
@@ -177,8 +208,21 @@ export default function SetPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="search-input"
           />
-          <div className="cards-count">
-            {filteredCards.length} / {cards.length} cards
+          <div className="cards-controls-right">
+            <label className="variants-toggle">
+              <input
+                type="checkbox"
+                checked={showVariants}
+                onChange={(e) => setShowVariants(e.target.checked)}
+              />
+              <span>Show Variants</span>
+            </label>
+            <div className="cards-count">
+              {filteredCards.length} / {cardsWithVariants.length} cards
+              {!showVariants && cards.length !== cardsWithVariants.length && (
+                <span className="variants-note"> ({cards.length} with variants)</span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -199,6 +243,11 @@ export default function SetPage() {
                     className="card-image"
                     loading="lazy"
                   />
+                  {card.variantCount > 0 && (
+                    <div className="variant-badge">
+                      {card.variantCount} variants
+                    </div>
+                  )}
                 </div>
                 <div className="card-item-info">
                   <div className="card-item-name">{card.name}</div>
