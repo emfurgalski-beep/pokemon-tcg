@@ -35,9 +35,10 @@ async function loadAllSets() {
     printedTotal: s.cardCount?.total || 0,
     total: s.cardCount?.total || 0,
     releaseDate: s.releaseDate,
+    ptcgoCode: s.tcgOnline,
     images: {
-      logo: s.logo || `https://api.tcgdex.net/v2/en/sets/${s.id}/logo`,
-      symbol: s.symbol || `https://api.tcgdex.net/v2/en/sets/${s.id}/symbol`
+      logo: s.logo ? `${s.logo}.png` : null,
+      symbol: s.symbol ? `${s.symbol}.png` : null
     }
   }))
   
@@ -69,8 +70,8 @@ async function loadSetCards(setId) {
       name: cards.name
     },
     images: {
-      small: c.image || `https://assets.tcgdex.net/en/${setId}/${c.localId}/low.webp`,
-      large: c.image || `https://assets.tcgdex.net/en/${setId}/${c.localId}/high.webp`
+      small: c.image ? `${c.image}/low.webp` : null,
+      large: c.image ? `${c.image}/high.webp` : null
     },
     types: c.types || [],
     hp: c.hp,
@@ -135,14 +136,15 @@ export default async function handler(req, res) {
         rarity: card.rarity,
         set: card.set,
         images: {
-          small: card.image || `https://assets.tcgdex.net/en/${setId}/${localId}/low.webp`,
-          large: card.image || `https://assets.tcgdex.net/en/${setId}/${localId}/high.webp`
+          small: card.image ? `${card.image}/low.webp` : null,
+          large: card.image ? `${card.image}/high.webp` : null
         },
         types: card.types || [],
         hp: card.hp,
         artist: card.illustrator,
         supertype: card.category,
-        subtypes: card.stage ? [card.stage] : []
+        subtypes: card.stage ? [card.stage] : [],
+        evolvesFrom: card.evolveFrom
       }
       
       setHeaders(res, 60 * 60)
