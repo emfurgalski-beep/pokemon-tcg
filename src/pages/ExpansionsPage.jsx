@@ -1,102 +1,141 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import '../styles/expansions.css'
 
 export default function ExpansionsPage() {
   const [sets, setSets] = useState([])
-  const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedSeries, setSelectedSeries] = useState('all')
 
   useEffect(() => {
-    let alive = true
-    async function load() {
-      try {
-        setLoading(true)
-        setError('')
-        const r = await fetch('/api/tcg?endpoint=sets')
-        const j = await r.json()
-        if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`)
-        if (alive) setSets(j.data || [])
-      } catch (e) {
-        if (alive) setError(String(e.message || e))
-      } finally {
-        if (alive) setLoading(false)
-      }
-    }
-    load()
-    return () => { alive = false }
+    fetch('/api/tcg?endpoint=sets')
+      .then(r => r.json())
+      .then(data => {
+        setSets(data.data || [])
+        setLoading(false)
+      })
+      .catch(err => {
+        setError(err.message)
+        setLoading(false)
+      })
   }, [])
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return sets
-    return sets.filter(s =>
-      String(s.name).toLowerCase().includes(q) ||
-      String(s.series).toLowerCase().includes(q) ||
-      String(s.id).toLowerCase().includes(q)
+  if (loading) {
+    return (
+      <div className="container">
+        <div className="loading-spinner">
+          <div className="spinner"></div>
+          <p>Loading expansions...</p>
+        </div>
+      </div>
     )
-  }, [sets, query])
+  }
 
-  const grouped = useMemo(() => {
-    const map = new Map()
-    for (const s of filtered) {
-      const key = s.series || 'Other'
-      if (!map.has(key)) map.set(key, [])
-      map.get(key).push(s)
-    }
-    return Array.from(map.entries())
-  }, [filtered])
+  if (error) {
+    return (
+      <div className="container">
+        <div className="error-message">
+          <h2>Error Loading Sets</h2>
+          <p>{error}</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Get unique series for filter
+  const allSeries = [...new Set(sets.map(s => s.series))].sort()
+
+  // Filter sets
+  const filtered = sets.filter(set => {
+    const matchesSearch = !searchQuery || 
+      set.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      set.id.toLowerCase().includes(searchQuery.toLowerCase())
+    
+    const matchesSeries = selectedSeries === 'all' || set.series === selectedSeries
+
+    return matchesSearch && matchesSeries
+  })
 
   return (
-    <main className="page">
-      <div className="pageHead">
-        <div>
-          <h1 className="h1">Expansions</h1>
-          <div className="muted">
-            {loading ? 'Loading…' : `${filtered.length} / ${sets.length} sets`}
-          </div>
-        </div>
-
-        <input
-          className="input"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search expansions (name, series, id)…"
-        />
+    <div className="expansions-page">
+      <div className="expansions-hero">
+        <h1>Pokemon TCG Sets</h1>
+        <p className="subtitle">{sets.length} sets • {filtered.length} showing</p>
       </div>
 
-      {loading && <div className="center muted">Loading sets…</div>}
-      {error && <div className="center error">Error: {error}</div>}
+      <div className="expansions-controls">
+        <input
+          type="search"
+          placeholder="Search sets..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="search-input"
+        />
 
-      {!loading && !error && grouped.map(([series, list]) => (
-        <section className="series" key={series}>
-          <div className="seriesHead">
-            <h2 className="seriesTitle">{series}</h2>
-            <span className="pill">{list.length}</span>
-          </div>
+        <select 
+          value={selectedSeries}
+          onChange={(e) => setSelectedSeries(e.target.value)}
+          className="series-select"
+        >
+          <option value="all">All Series</option>
+          {allSeries.map(series => (
+            <option key={series} value={series}>{series}</option>
+          ))}
+        </select>
+      </div>
 
-          <div className="grid">
-            {list.map(set => (
-              <Link key={set.id} to={`/pokemon/expansions/${set.id}`} className="setCard">
-                <div className="setTop">
-                  <img className="setLogo" src={set.images?.logo} alt={set.name} loading="lazy" />
+      <div className="sets-grid">
+        {filtered.map(set => (
+          <Link 
+            key={set.id} 
+            to={`/pokemon/expansions/${set.id}`}
+            className="set-card-modern"
+          >
+            <div className="set-image-wrapper">
+              {set.images?.logo ? (
+                <img 
+                  src={set.images.logo}
+                  alt={set.name}
+                  className="set-image"
+                  loading="lazy"
+                  onError={(e) => {
+                    e.target.style.display = 'none'
+                    const placeholder = e.target.nextElementSibling
+                    if (placeholder) placeholder.style.display = 'flex'
+                  }}
+                />
+              ) : null}
+              <div className="set-image-placeholder" style={{ display: set.images?.logo ? 'none' : 'flex' }}>
+                <span className="set-code">{set.id.toUpperCase()}</span>
+              </div>
+            </div>
+            
+            <div className="set-details">
+              <h3 className="set-title">{set.name}</h3>
+              <div className="set-meta-row">
+                <span className="set-series">{set.series}</span>
+                <span className="set-count">{set.total} cards</span>
+              </div>
+              {set.releaseDate && (
+                <div className="set-release">
+                  {new Date(set.releaseDate.replace(/\//g, '-')).toLocaleDateString('en-US', { 
+                    month: 'short', 
+                    year: 'numeric' 
+                  })}
                 </div>
+              )}
+            </div>
+          </Link>
+        ))}
+      </div>
 
-                <div className="setBody">
-                  <div className="setName">{set.name}</div>
-                  <div className="setMeta">
-                    <span className="pill">{set.releaseDate}</span>
-                    <span className="pill">{set.total} cards</span>
-                  </div>
-                </div>
-
-
-              </Link>
-            ))}
-          </div>
-        </section>
-      ))}
-    </main>
+      {filtered.length === 0 && (
+        <div className="no-results">
+          <p>No sets found matching your search.</p>
+        </div>
+      )}
+    </div>
   )
 }

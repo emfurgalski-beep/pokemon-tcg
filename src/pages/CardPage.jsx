@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
+import Breadcrumbs from '../components/Breadcrumbs'
 import '../styles/card.css'
 
 export default function CardPage() {
@@ -37,12 +38,13 @@ export default function CardPage() {
   }, [cardId])
 
   const setId = card?.set?.id
+  const setName = card?.set?.name
 
   const facts = useMemo(() => {
     if (!card) return []
     const out = []
     out.push(['Card ID', card.id])
-    if (card.set?.name) out.push(['Set', `${card.set.name} (${card.set.id})`])
+    if (setName) out.push(['Set', `${setName} (${setId})`])
     if (card.number) out.push(['Number', `#${card.number}`])
     if (card.rarity) out.push(['Rarity', card.rarity])
     if (card.supertype) out.push(['Supertype', card.supertype])
@@ -53,7 +55,7 @@ export default function CardPage() {
     if (card.evolvesFrom) out.push(['Evolves from', card.evolvesFrom])
     if (card.rules?.length) out.push(['Rules', card.rules.join(' • ')])
     return out
-  }, [card])
+  }, [card, setName, setId])
 
   function setVariant(next) {
     setSearchParams(prev => {
@@ -63,31 +65,34 @@ export default function CardPage() {
     })
   }
 
+  const breadcrumbItems = [
+    { label: 'Expansions', to: '/pokemon/expansions' }
+  ]
+  if (setId && setName) {
+    breadcrumbItems.push({ label: setName, to: `/pokemon/expansions/${setId}` })
+  }
+  if (card) {
+    breadcrumbItems.push({ label: card.name })
+  }
+
   return (
     <main className="page">
+      <Breadcrumbs items={breadcrumbItems} />
+
       <div className="cardHead">
-        <Link
-          to={setId ? `/pokemon/expansions/${setId}` : '/pokemon/expansions'}
-          className="breadcrumbLink"
-        >
-          ← Back to set
-        </Link>
-
-        <div className="cardHeadRight">
-          <div className="variantTabs" role="tablist" aria-label="Variant">
-            <button className={`tab ${variant === 'normal' ? 'tabActive' : ''}`} onClick={() => setVariant('normal')}>
-              Normal
-            </button>
-            <button className={`tab ${variant === 'holo' ? 'tabActive' : ''}`} onClick={() => setVariant('holo')}>
-              Holo
-            </button>
-            <button className={`tab ${variant === 'reverse' ? 'tabActive' : ''}`} onClick={() => setVariant('reverse')}>
-              Reverse
-            </button>
-          </div>
-
-          <span className="pill">variant: {variant}</span>
+        <div className="variantTabs" role="tablist" aria-label="Variant">
+          <button className={`tab ${variant === 'normal' ? 'tabActive' : ''}`} onClick={() => setVariant('normal')}>
+            Normal
+          </button>
+          <button className={`tab ${variant === 'holo' ? 'tabActive' : ''}`} onClick={() => setVariant('holo')}>
+            Holo
+          </button>
+          <button className={`tab ${variant === 'reverse' ? 'tabActive' : ''}`} onClick={() => setVariant('reverse')}>
+            Reverse
+          </button>
         </div>
+
+        <span className="pill">variant: {variant}</span>
       </div>
 
       {loading && <div className="center muted">Loading card…</div>}
@@ -110,7 +115,7 @@ export default function CardPage() {
               <h1 className="cardTitle">{card.name}</h1>
 
               <div className="cardSub">
-                {card.set?.name && <span>{card.set.name}</span>}
+                {setName && <span>{setName}</span>}
                 {card.number && <><span>•</span><span>#{card.number}</span></>}
                 {card.rarity && <><span>•</span><span>{card.rarity}</span></>}
               </div>

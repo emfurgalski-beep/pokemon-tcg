@@ -92,7 +92,62 @@
   font-weight: 800;
 }
 
-/* mobile */
+/* ============== CARD GRID ============== */
+.cardGrid{
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.miniCard{
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: rgba(18,21,30,.78);
+  overflow: hidden;
+  transition: transform .15s, border-color .15s;
+}
+
+.miniCard:hover{
+  transform: translateY(-3px);
+  border-color: rgba(245,200,66,.35);
+}
+
+.miniImgWrap{
+  background: rgba(11,13,19,.55);
+  padding: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 220px;
+}
+
+.miniImg{
+  width: 100%;
+  max-width: 160px;
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.miniBody{
+  padding: 10px 12px;
+  border-top: 1px solid rgba(35,40,58,.75);
+}
+
+.miniName{
+  font-weight: 900;
+  font-size: 13px;
+  margin-bottom: 8px;
+  letter-spacing: -0.2px;
+}
+
+.miniMeta{
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* ============== MOBILE ============== */
 @media (max-width: 900px){
   .setHero{
     grid-template-columns: 1fr;
@@ -103,5 +158,10 @@
   .setHero__logo, .setHero__logoFallback{
     max-width: 100%;
     width: 100%;
+  }
+  
+  .cardGrid{
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
   }
 }
