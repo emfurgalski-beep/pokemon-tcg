@@ -32,13 +32,13 @@ async function loadAllSets() {
     id: s.id,
     name: s.name,
     series: s.serie?.name || s.serie || 'Unknown',
-    printedTotal: s.cardCount?.total || 0,
-    total: s.cardCount?.total || 0,
-    releaseDate: s.releaseDate,
+    printedTotal: s.cardCount?.total || s.cardCount?.official || 0,
+    total: s.cardCount?.total || s.cardCount?.official || 0,
+    releaseDate: s.releaseDate, // TCGdex format: "2022/03/25"
     ptcgoCode: s.tcgOnline,
     images: {
-      logo: s.logo ? `${s.logo}.png` : null,
-      symbol: s.symbol ? `${s.symbol}.png` : null
+      logo: s.logo ? `${s.logo}.png` : `https://assets.tcgdex.net/en/${s.serie?.id || 'base'}/${s.id}/logo.png`,
+      symbol: s.symbol ? `${s.symbol}.png` : `https://assets.tcgdex.net/univ/${s.serie?.id || 'base'}/${s.id}/symbol.png`
     }
   }))
   
@@ -60,23 +60,27 @@ async function loadSetCards(setId) {
   const cards = await fetchTCGdex(`sets/${setId}`)
   
   // Convert format
-  const converted = (cards.cards || []).map(c => ({
-    id: c.id || `${setId}-${c.localId}`,
-    name: c.name,
-    number: c.localId,
-    rarity: c.rarity,
-    set: {
-      id: setId,
-      name: cards.name
-    },
-    images: {
-      small: c.image ? `${c.image}/low.webp` : null,
-      large: c.image ? `${c.image}/high.webp` : null
-    },
-    types: c.types || [],
-    hp: c.hp,
-    artist: c.illustrator
-  }))
+  const converted = (cards.cards || []).map(c => {
+    const imageBase = c.image || `https://assets.tcgdex.net/en/${setId}/${c.localId}`
+    
+    return {
+      id: c.id || `${setId}-${c.localId}`,
+      name: c.name,
+      number: c.localId,
+      rarity: c.rarity,
+      set: {
+        id: setId,
+        name: cards.name
+      },
+      images: {
+        small: `${imageBase}/low.webp`,
+        large: `${imageBase}/high.webp`
+      },
+      types: c.types || [],
+      hp: c.hp,
+      artist: c.illustrator
+    }
+  })
   
   cardsBySet.set(setId, converted)
   return converted
@@ -129,6 +133,8 @@ export default async function handler(req, res) {
       const card = await fetchTCGdex(`sets/${setId}/${localId}`)
       
       // Convert format
+      const imageBase = card.image || `https://assets.tcgdex.net/en/${setId}/${localId}`
+      
       const converted = {
         id: card.id || `${setId}-${localId}`,
         name: card.name,
@@ -136,8 +142,8 @@ export default async function handler(req, res) {
         rarity: card.rarity,
         set: card.set,
         images: {
-          small: card.image ? `${card.image}/low.webp` : null,
-          large: card.image ? `${card.image}/high.webp` : null
+          small: `${imageBase}/low.webp`,
+          large: `${imageBase}/high.webp`
         },
         types: card.types || [],
         hp: card.hp,
