@@ -29,13 +29,19 @@ export default function CardPage() {
       }
       
       setCard(data.data)
+      console.log('Card set info:', data.data?.set)
 
       // Load full set info for breadcrumbs
       if (data.data?.set?.id) {
+        console.log('Loading full set info for:', data.data.set.id)
         const setsResponse = await fetch('/api/tcg?endpoint=sets')
         const setsData = await setsResponse.json()
+        console.log('All sets loaded:', setsData.data?.length)
         const fullSetInfo = setsData.data?.find(s => s.id === data.data.set.id)
+        console.log('Found set info:', fullSetInfo)
         setSetInfo(fullSetInfo || data.data.set)
+      } else {
+        console.log('No set.id found in card data')
       }
     } catch (err) {
       console.error('Load error:', err)
