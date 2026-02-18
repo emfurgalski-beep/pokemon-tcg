@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import Breadcrumbs from '../components/Breadcrumbs'
 import '../styles/card.css'
 
 export default function CardPage() {
@@ -50,9 +51,11 @@ export default function CardPage() {
   return (
     <div className="card-page">
       <div className="container">
-        <Link to={`/expansions/${card.set?.id}`} className="back-link">
-          ← Back to {card.set?.name}
-        </Link>
+        <Breadcrumbs items={[
+          { label: 'Expansions', to: '/expansions' },
+          { label: card.set?.name, to: `/expansions/${card.set?.id}` },
+          { label: card.name }
+        ]} />
 
         <div className="card-content">
           {/* Left: Card Image */}

@@ -9,19 +9,6 @@
   padding: 2rem 0;
 }
 
-.back-link {
-  display: inline-flex;
-  align-items: center;
-  color: var(--text-muted);
-  font-weight: 600;
-  margin-bottom: 1.5rem;
-  transition: color 0.2s;
-}
-
-.back-link:hover {
-  color: var(--accent);
-}
-
 .set-header-content {
   display: flex;
   align-items: center;

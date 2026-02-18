@@ -3,19 +3,6 @@
   padding: 2rem 0;
 }
 
-.back-link {
-  display: inline-flex;
-  align-items: center;
-  color: var(--text-muted);
-  font-weight: 600;
-  margin-bottom: 2rem;
-  transition: color 0.2s;
-}
-
-.back-link:hover {
-  color: var(--accent);
-}
-
 .card-content {
   display: grid;
   grid-template-columns: 1fr 1.5fr;

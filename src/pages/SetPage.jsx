@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import Breadcrumbs from '../components/Breadcrumbs'
 import '../styles/set.css'
 
 export default function SetPage() {
@@ -79,7 +80,10 @@ export default function SetPage() {
       {/* Set Header */}
       <div className="set-header">
         <div className="container">
-          <Link to="/expansions" className="back-link">← Back to Expansions</Link>
+          <Breadcrumbs items={[
+            { label: 'Expansions', to: '/expansions' },
+            { label: setInfo.name }
+          ]} />
           
           <div className="set-header-content">
             {setInfo.images?.logo && (
