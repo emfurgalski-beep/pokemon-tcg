@@ -24,24 +24,55 @@ async function loadAllSets() {
     return setsCache
   }
 
-  // TCGdex returns sets in different format - adapt it
-  const sets = await fetchTCGdex('sets')
+  // Get basic list first
+  const setsList = await fetchTCGdex('sets')
   
-  // Convert TCGdex format to pokemontcg.io format
-  setsCache = sets.map(s => ({
-    id: s.id,
-    name: s.name,
-    series: s.serie?.name || s.serie || 'Unknown',
-    printedTotal: s.cardCount?.total || s.cardCount?.official || 0,
-    total: s.cardCount?.total || s.cardCount?.official || 0,
-    releaseDate: s.releaseDate, // TCGdex format: "2022/03/25"
-    ptcgoCode: s.tcgOnline,
-    images: {
-      logo: s.logo ? `${s.logo}.png` : `https://assets.tcgdex.net/en/${s.serie?.id || 'base'}/${s.id}/logo.png`,
-      symbol: s.symbol ? `${s.symbol}.png` : `https://assets.tcgdex.net/univ/${s.serie?.id || 'base'}/${s.id}/symbol.png`
-    }
-  }))
+  // Load full details for first 100 sets (includes releaseDate)
+  // Do it in smaller batches to avoid rate limits
+  const batchSize = 20
+  const setsToLoad = setsList.slice(0, 100)
+  const setsWithDetails = []
   
+  for (let i = 0; i < setsToLoad.length; i += batchSize) {
+    const batch = setsToLoad.slice(i, i + batchSize)
+    const batchResults = await Promise.all(
+      batch.map(async (s) => {
+        try {
+          const full = await fetchTCGdex(`sets/${s.id}`)
+          return {
+            id: full.id,
+            name: full.name,
+            series: full.serie?.name || 'Unknown',
+            printedTotal: full.cardCount?.official || full.cardCount?.total || 0,
+            total: full.cardCount?.total || 0,
+            releaseDate: full.releaseDate, // "1999/01/09"
+            ptcgoCode: full.tcgOnline,
+            images: {
+              logo: full.logo ? `${full.logo}.png` : null,
+              symbol: full.symbol ? `${full.symbol}.png` : null
+            }
+          }
+        } catch (e) {
+          // Fallback
+          return {
+            id: s.id,
+            name: s.name,
+            series: 'Unknown',
+            printedTotal: s.cardCount?.total || 0,
+            total: s.cardCount?.total || 0,
+            releaseDate: null,
+            images: {
+              logo: s.logo ? `${s.logo}.png` : null,
+              symbol: null
+            }
+          }
+        }
+      })
+    )
+    setsWithDetails.push(...batchResults)
+  }
+  
+  setsCache = setsWithDetails
   cacheTime = now
   return setsCache
 }
