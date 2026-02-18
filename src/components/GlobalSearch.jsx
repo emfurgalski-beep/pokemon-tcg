@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import '../styles/global-search.css'
 
 export default function GlobalSearch() {
@@ -8,6 +8,15 @@ export default function GlobalSearch() {
   const [loading, setLoading] = useState(false)
   const [showResults, setShowResults] = useState(false)
   const searchRef = useRef(null)
+  const navigate = useNavigate()
+
+  // Handle Enter key
+  function handleKeyDown(e) {
+    if (e.key === 'Enter' && query.trim().length >= 2) {
+      setShowResults(false)
+      navigate(`/search?q=${encodeURIComponent(query.trim())}`)
+    }
+  }
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -96,6 +105,7 @@ export default function GlobalSearch() {
           placeholder="Search cards..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={handleKeyDown}
           onFocus={() => query.length >= 2 && setShowResults(true)}
           className="global-search-input"
         />

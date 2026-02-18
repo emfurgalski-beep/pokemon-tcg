@@ -3,8 +3,6 @@ import GlobalSearch from './GlobalSearch'
 import '../styles/navbar.css'
 
 export default function Navbar() {
-  console.log('[Navbar] GlobalSearch component:', GlobalSearch)
-  
   return (
     <nav className="navbar">
       <div className="navbar-container">
