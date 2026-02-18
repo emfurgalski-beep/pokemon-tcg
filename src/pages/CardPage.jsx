@@ -6,6 +6,7 @@ import '../styles/card.css'
 export default function CardPage() {
   const { cardId } = useParams()
   const [card, setCard] = useState(null)
+  const [setInfo, setSetInfo] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -28,6 +29,14 @@ export default function CardPage() {
       }
       
       setCard(data.data)
+
+      // Load full set info for breadcrumbs
+      if (data.data?.set?.id) {
+        const setsResponse = await fetch('/api/tcg?endpoint=sets')
+        const setsData = await setsResponse.json()
+        const fullSetInfo = setsData.data?.find(s => s.id === data.data.set.id)
+        setSetInfo(fullSetInfo || data.data.set)
+      }
     } catch (err) {
       console.error('Load error:', err)
       setError(err.message)
@@ -53,7 +62,7 @@ export default function CardPage() {
       <div className="container">
         <Breadcrumbs items={[
           { label: 'Expansions', to: '/expansions' },
-          { label: card.set?.name, to: `/expansions/${card.set?.id}` },
+          { label: setInfo?.name || card.set?.name || 'Set', to: `/expansions/${card.set?.id}` },
           { label: card.name }
         ]} />
 
