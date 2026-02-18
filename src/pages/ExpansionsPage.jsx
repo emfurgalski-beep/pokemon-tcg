@@ -38,6 +38,11 @@ export default function ExpansionsPage() {
     return ['all', ...Array.from(seriesSet).sort()]
   }, [sets])
 
+  // Calculate total cards across all sets
+  const totalCards = useMemo(() => {
+    return sets.reduce((sum, set) => sum + (set.total || 0), 0)
+  }, [sets])
+
   // Filter by search query and series
   const filteredSets = useMemo(() => {
     let result = sets
@@ -128,11 +133,26 @@ export default function ExpansionsPage() {
     <div className="expansions-page">
       <div className="expansions-hero">
         <h1>Pokemon TCG Expansions</h1>
-        <p className="subtitle">{sets.length} sets • {sortedSets.length} showing</p>
+        <div className="stats-row">
+          <div className="stat-item">
+            <div className="stat-value">{sets.length}</div>
+            <div className="stat-label">Total Sets</div>
+          </div>
+          <div className="stat-divider">•</div>
+          <div className="stat-item">
+            <div className="stat-value">{totalCards.toLocaleString()}</div>
+            <div className="stat-label">Total Cards</div>
+          </div>
+          <div className="stat-divider">•</div>
+          <div className="stat-item">
+            <div className="stat-value">{sortedSets.length}</div>
+            <div className="stat-label">Showing</div>
+          </div>
+        </div>
       </div>
 
       <div className="container">
-        <div className="filters-bar">
+        <div className="search-section">
           <input
             type="search"
             placeholder="Search sets by name, series, or ID..."
@@ -140,7 +160,9 @@ export default function ExpansionsPage() {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="search-input"
           />
+        </div>
 
+        <div className="filters-bar">
           <select 
             value={selectedSeries} 
             onChange={(e) => setSelectedSeries(e.target.value)}

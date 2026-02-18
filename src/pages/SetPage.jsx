@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import Breadcrumbs from '../components/Breadcrumbs'
 import '../styles/set.css'
@@ -63,6 +63,24 @@ export default function SetPage() {
     )
   })
 
+  // Calculate type breakdown for Pokemon cards
+  const typeBreakdown = useMemo(() => {
+    const pokemonCards = cards.filter(c => c.supertype === 'Pokémon')
+    const breakdown = {}
+    
+    pokemonCards.forEach(card => {
+      if (card.types && card.types.length > 0) {
+        card.types.forEach(type => {
+          breakdown[type] = (breakdown[type] || 0) + 1
+        })
+      }
+    })
+
+    return Object.entries(breakdown)
+      .sort((a, b) => b[1] - a[1]) // Sort by count descending
+      .slice(0, 8) // Top 8 types
+  }, [cards])
+
   if (loading) {
     return <div className="loading">Loading set...</div>
   }
@@ -110,6 +128,21 @@ export default function SetPage() {
 
       {/* Cards Section */}
       <div className="container">
+        {/* Type Breakdown */}
+        {typeBreakdown.length > 0 && (
+          <div className="type-breakdown">
+            <h3 className="breakdown-title">Type Distribution</h3>
+            <div className="type-grid">
+              {typeBreakdown.map(([type, count]) => (
+                <div key={type} className="type-badge">
+                  <span className="type-name">{type}</span>
+                  <span className="type-count">{count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="cards-controls">
           <input
             type="search"
