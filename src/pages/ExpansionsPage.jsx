@@ -1,102 +1,102 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import '../styles/expansions.css'
 
 export default function ExpansionsPage() {
   const [sets, setSets] = useState([])
-  const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    let alive = true
-    async function load() {
-      try {
-        setLoading(true)
-        setError('')
-        const r = await fetch('/api/tcg?endpoint=sets')
-        const j = await r.json()
-        if (!r.ok) throw new Error(j?.error || `HTTP ${r.status}`)
-        if (alive) setSets(j.data || [])
-      } catch (e) {
-        if (alive) setError(String(e.message || e))
-      } finally {
-        if (alive) setLoading(false)
-      }
-    }
-    load()
-    return () => { alive = false }
+    fetch('/api/tcg?endpoint=sets')
+      .then(r => r.json())
+      .then(data => {
+        setSets(data.data || [])
+        setLoading(false)
+      })
+      .catch(err => {
+        setError(err.message)
+        setLoading(false)
+      })
   }, [])
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return sets
-    return sets.filter(s =>
-      String(s.name).toLowerCase().includes(q) ||
-      String(s.series).toLowerCase().includes(q) ||
-      String(s.id).toLowerCase().includes(q)
+  if (loading) {
+    return (
+      <div className="container">
+        <div className="loading">Loading expansions...</div>
+      </div>
     )
-  }, [sets, query])
+  }
 
-  const grouped = useMemo(() => {
-    const map = new Map()
-    for (const s of filtered) {
-      const key = s.series || 'Other'
-      if (!map.has(key)) map.set(key, [])
-      map.get(key).push(s)
-    }
-    return Array.from(map.entries())
-  }, [filtered])
+  if (error) {
+    return (
+      <div className="container">
+        <div className="error">Error: {error}</div>
+      </div>
+    )
+  }
+
+  // Group by series
+  const bySeries = sets.reduce((acc, set) => {
+    const series = set.series || 'Unknown'
+    if (!acc[series]) acc[series] = []
+    acc[series].push(set)
+    return acc
+  }, {})
 
   return (
-    <main className="page">
-      <div className="pageHead">
-        <div>
-          <h1 className="h1">Expansions</h1>
-          <div className="muted">
-            {loading ? 'Loading…' : `${filtered.length} / ${sets.length} sets`}
-          </div>
-        </div>
-
-        <input
-          className="input"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search expansions (name, series, id)…"
-        />
+    <div className="container">
+      <div className="page-header">
+        <h1>Pokemon TCG Expansions</h1>
+        <p className="subtitle">{sets.length} sets available</p>
       </div>
 
-      {loading && <div className="center muted">Loading sets…</div>}
-      {error && <div className="center error">Error: {error}</div>}
-
-      {!loading && !error && grouped.map(([series, list]) => (
-        <section className="series" key={series}>
-          <div className="seriesHead">
-            <h2 className="seriesTitle">{series}</h2>
-            <span className="pill">{list.length}</span>
-          </div>
-
-          <div className="grid">
-            {list.map(set => (
-              <Link key={set.id} to={`/pokemon/expansions/${set.id}`} className="setCard">
-                <div className="setTop">
-                  <img className="setLogo" src={set.images?.logo} alt={set.name} loading="lazy" />
+      {Object.entries(bySeries).map(([series, seriesSets]) => (
+        <div key={series} className="series-group">
+          <h2 className="series-title">{series}</h2>
+          
+          <div className="sets-grid">
+            {seriesSets.map(set => (
+              <Link 
+                key={set.id} 
+                to={`/pokemon/expansions/${set.id}`}
+                className="set-card"
+              >
+                <div className="set-logo-container">
+                  {set.images?.logo ? (
+                    <img 
+                      src={set.images.logo} 
+                      alt={set.name}
+                      className="set-logo"
+                      onError={(e) => {
+                        // Fallback to text if image fails
+                        e.target.style.display = 'none'
+                        e.target.parentElement.classList.add('no-logo')
+                      }}
+                    />
+                  ) : (
+                    <div className="set-logo-placeholder">
+                      {set.id.toUpperCase()}
+                    </div>
+                  )}
                 </div>
-
-                <div className="setBody">
-                  <div className="setName">{set.name}</div>
-                  <div className="setMeta">
-                    <span className="pill">{set.releaseDate}</span>
-                    <span className="pill">{set.total} cards</span>
+                
+                <div className="set-info">
+                  <h3 className="set-name">{set.name}</h3>
+                  <div className="set-meta">
+                    <span className="set-count">{set.total} cards</span>
+                    {set.releaseDate && (
+                      <span className="set-date">
+                        {new Date(set.releaseDate.replace(/\//g, '-')).toLocaleDateString()}
+                      </span>
+                    )}
                   </div>
                 </div>
-
-
               </Link>
             ))}
           </div>
-        </section>
+        </div>
       ))}
-    </main>
+    </div>
   )
 }

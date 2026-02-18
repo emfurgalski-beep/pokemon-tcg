@@ -27,14 +27,13 @@ async function loadAllSets() {
   // Get basic list first
   const setsList = await fetchTCGdex('sets')
   
-  // Load full details for first 100 sets (includes releaseDate)
-  // Do it in smaller batches to avoid rate limits
-  const batchSize = 20
-  const setsToLoad = setsList.slice(0, 100)
+  // Load full details for ALL sets (includes releaseDate)
+  // Do it in batches to avoid overwhelming the API
+  const batchSize = 25
   const setsWithDetails = []
   
-  for (let i = 0; i < setsToLoad.length; i += batchSize) {
-    const batch = setsToLoad.slice(i, i + batchSize)
+  for (let i = 0; i < setsList.length; i += batchSize) {
+    const batch = setsList.slice(i, i + batchSize)
     const batchResults = await Promise.all(
       batch.map(async (s) => {
         try {
@@ -48,12 +47,13 @@ async function loadAllSets() {
             releaseDate: full.releaseDate, // "1999/01/09"
             ptcgoCode: full.tcgOnline,
             images: {
-              logo: full.logo ? `${full.logo}.png` : null,
-              symbol: full.symbol ? `${full.symbol}.png` : null
+              // TCGdex URLs don't have extension in API response
+              logo: full.logo || null,
+              symbol: full.symbol || null
             }
           }
         } catch (e) {
-          // Fallback
+          // Fallback to basic info from list
           return {
             id: s.id,
             name: s.name,
@@ -62,7 +62,7 @@ async function loadAllSets() {
             total: s.cardCount?.total || 0,
             releaseDate: null,
             images: {
-              logo: s.logo ? `${s.logo}.png` : null,
+              logo: s.logo || null,
               symbol: null
             }
           }
