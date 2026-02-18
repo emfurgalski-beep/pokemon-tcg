@@ -1,11 +1,12 @@
 // Using TCGdex API - free, unlimited, reliable
 const TCGDEX_BASE = 'https://api.tcgdex.net/v2/en'
 
-// In-memory cache
+// In-memory cache with version
 let setsCache = null
 let cardsBySet = new Map()
 let cacheTime = null
 const CACHE_DURATION = 6 * 60 * 60 * 1000 // 6 hours
+const CACHE_VERSION = '2026-02-18-v2' // Increment this to force cache clear
 
 function setHeaders(res, seconds = 3600) {
   res.setHeader('Cache-Control', `public, s-maxage=${seconds}, stale-while-revalidate=86400`)
@@ -26,6 +27,7 @@ async function loadAllSets() {
 
   // Get basic list first
   const setsList = await fetchTCGdex('sets')
+  console.log(`TCGdex returned ${setsList.length} total sets`)
   
   // Filter: Keep only English main sets (exclude Japanese, TCG Pocket, special editions)
   const mainSets = setsList.filter(s => {
@@ -42,6 +44,9 @@ async function loadAllSets() {
     
     return true
   })
+  
+  console.log(`Filtered to ${mainSets.length} English sets`)
+  console.log(`Excluded: ${setsList.length - mainSets.length} sets`)
   
   // Load full details for filtered sets (includes releaseDate)
   // Do it in batches to avoid overwhelming the API
@@ -230,7 +235,9 @@ export default async function handler(req, res) {
       return res.status(200).json({ 
         ok: true, 
         source: 'TCGdex',
-        cached: !!setsCache
+        cached: !!setsCache,
+        version: CACHE_VERSION,
+        setCount: setsCache?.length || 0
       })
     }
 
