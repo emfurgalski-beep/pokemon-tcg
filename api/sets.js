@@ -1,28 +1,33 @@
 export default async function handler(req, res) {
   try {
-    const url = 'https://api.pokemontcg.io/v2/sets?orderBy=-releaseDate&pageSize=50'
+    const response = await fetch(
+      'https://api.pokemontcg.io/v2/sets?orderBy=-releaseDate&page=1&pageSize=50',
+      {
+        method: 'GET',
+        headers: {
+          'X-Api-Key': process.env.TCG_API_KEY,
+          'Accept': 'application/json',
+          'User-Agent': 'FromAlabastia/1.0 (vercel serverless)',
+          'Cache-Control': 'no-cache'
+        }
+      }
+    )
 
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'X-Api-Key': process.env.TCG_API_KEY,
-        'Accept': 'application/json',
-      },
-    })
+    const text = await response.text()
 
-    const bodyText = await response.text()
+    if (!response.ok) {
+      return res.status(500).json({
+        status: response.status,
+        body: text
+      })
+    }
 
-    // pokażemy Ci dokładnie co zwraca serwer
-    res.status(200).json({
-      ok: response.ok,
-      status: response.status,
-      statusText: response.statusText,
-      contentType: response.headers.get('content-type'),
-      // utnijmy, żeby nie zalać ekranu
-      bodyPreview: bodyText.slice(0, 800),
-      url,
-    })
+    const data = JSON.parse(text)
+
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.status(200).json(data)
+
   } catch (err) {
-    res.status(200).json({ ok: false, error: String(err) })
+    res.status(500).json({ error: err.message })
   }
 }
