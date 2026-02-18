@@ -24,13 +24,17 @@
   font-size: 1.1rem;
 }
 
-.search-bar {
+.filters-bar {
+  display: flex;
+  gap: 1rem;
   margin: 2rem 0;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .search-input {
-  width: 100%;
-  max-width: 600px;
+  flex: 1;
+  min-width: 250px;
   padding: 1rem 1.5rem;
   font-size: 1rem;
   background: var(--bg-card);
@@ -43,6 +47,50 @@
 .search-input:focus {
   outline: none;
   border-color: var(--accent);
+}
+
+.filter-select {
+  padding: 1rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  background: var(--bg-card);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 180px;
+}
+
+.filter-select:hover {
+  border-color: var(--accent);
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.reset-button {
+  padding: 1rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.reset-button:hover {
+  background: var(--accent-hover);
+  transform: translateY(-2px);
+}
+
+.reset-button:active {
+  transform: translateY(0);
 }
 
 .series-section {
@@ -135,6 +183,18 @@
 @media (max-width: 768px) {
   .expansions-hero h1 {
     font-size: 2rem;
+  }
+
+  .filters-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-input,
+  .filter-select,
+  .reset-button {
+    width: 100%;
+    min-width: 100%;
   }
 
   .sets-grid {
