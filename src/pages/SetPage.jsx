@@ -17,23 +17,35 @@ export default function SetPage() {
   async function loadSetData() {
     try {
       setLoading(true)
+      console.log('Loading set:', setId)
       
       // Load set info
       const setsResponse = await fetch('/api/tcg?endpoint=sets')
       const setsData = await setsResponse.json()
+      console.log('Sets loaded:', setsData.data?.length)
+      
       const set = setsData.data?.find(s => s.id === setId)
+      console.log('Found set:', set)
       setSetInfo(set)
 
       // Load cards
-      const cardsResponse = await fetch(`/api/tcg?endpoint=cards&setId=${setId}`)
+      const cardsUrl = `/api/tcg?endpoint=cards&setId=${setId}`
+      console.log('Fetching cards from:', cardsUrl)
+      
+      const cardsResponse = await fetch(cardsUrl)
       const cardsData = await cardsResponse.json()
       
+      console.log('Cards response status:', cardsResponse.status)
+      console.log('Cards data:', cardsData)
+      
       if (!cardsResponse.ok) {
-        throw new Error(cardsData.error || 'Failed to load cards')
+        throw new Error(cardsData.error || `HTTP ${cardsResponse.status}`)
       }
       
       setCards(cardsData.data || [])
+      console.log('Cards loaded:', cardsData.data?.length)
     } catch (err) {
+      console.error('Load error:', err)
       setError(err.message)
     } finally {
       setLoading(false)
