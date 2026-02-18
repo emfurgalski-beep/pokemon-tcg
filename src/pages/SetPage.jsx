@@ -133,7 +133,16 @@ export default function SetPage() {
       {loadingCards && <div className="center muted">Loading cards…</div>}
       {error && <div className="center error">Error: {error}</div>}
 
-      {!loadingCards && !error && (
+      {!loadingCards && !error && cards.length === 0 && (
+        <div className="center muted">
+          <p>No cards available for this set.</p>
+          <p style={{ fontSize: '0.9em', marginTop: '0.5rem' }}>
+            This set might not be available in the TCGdex database yet.
+          </p>
+        </div>
+      )}
+
+      {!loadingCards && !error && cards.length > 0 && (
         <div className="cardGrid">
           {filtered.map(card => {
             const slug = slugify(card.name)

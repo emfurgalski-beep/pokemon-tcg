@@ -65,13 +65,17 @@ export default function ExpansionsPage() {
                 <div className="set-logo-container">
                   {set.images?.logo ? (
                     <img 
-                      src={set.images.logo} 
+                      src={`${set.images.logo}.png`}
                       alt={set.name}
                       className="set-logo"
                       onError={(e) => {
                         // Fallback to text if image fails
                         e.target.style.display = 'none'
                         e.target.parentElement.classList.add('no-logo')
+                        const placeholder = document.createElement('div')
+                        placeholder.className = 'set-logo-placeholder'
+                        placeholder.textContent = set.id.toUpperCase()
+                        e.target.parentElement.appendChild(placeholder)
                       }}
                     />
                   ) : (

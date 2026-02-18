@@ -87,34 +87,48 @@ async function loadSetCards(setId) {
     }
   }
 
-  // Fetch cards for specific set
-  const cards = await fetchTCGdex(`sets/${setId}`)
-  
-  // Convert format
-  const converted = (cards.cards || []).map(c => {
-    const imageBase = c.image || `https://assets.tcgdex.net/en/${setId}/${c.localId}`
+  try {
+    // Fetch cards for specific set
+    const setData = await fetchTCGdex(`sets/${setId}`)
     
-    return {
-      id: c.id || `${setId}-${c.localId}`,
-      name: c.name,
-      number: c.localId,
-      rarity: c.rarity,
-      set: {
-        id: setId,
-        name: cards.name
-      },
-      images: {
-        small: `${imageBase}/low.webp`,
-        large: `${imageBase}/high.webp`
-      },
-      types: c.types || [],
-      hp: c.hp,
-      artist: c.illustrator
+    // Some sets might not have cards array
+    if (!setData.cards || setData.cards.length === 0) {
+      console.warn(`No cards found for set ${setId}`)
+      cardsBySet.set(setId, [])
+      return []
     }
-  })
-  
-  cardsBySet.set(setId, converted)
-  return converted
+    
+    // Convert format
+    const converted = setData.cards.map(c => {
+      const imageBase = c.image || `https://assets.tcgdex.net/en/${setId}/${c.localId}`
+      
+      return {
+        id: c.id || `${setId}-${c.localId}`,
+        name: c.name,
+        number: c.localId,
+        rarity: c.rarity,
+        set: {
+          id: setId,
+          name: setData.name
+        },
+        images: {
+          small: `${imageBase}/low.webp`,
+          large: `${imageBase}/high.webp`
+        },
+        types: c.types || [],
+        hp: c.hp,
+        artist: c.illustrator
+      }
+    })
+    
+    cardsBySet.set(setId, converted)
+    return converted
+  } catch (error) {
+    console.error(`Failed to load cards for ${setId}:`, error.message)
+    // Return empty array instead of failing
+    cardsBySet.set(setId, [])
+    return []
+  }
 }
 
 export default async function handler(req, res) {
