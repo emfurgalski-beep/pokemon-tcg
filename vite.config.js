@@ -4,12 +4,6 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    proxy: {
-      '/api': {
-        target: 'https://pokemon-tcg-jet.vercel.app',
-        changeOrigin: true,
-        secure: true
-      }
-    }
+    port: 3000
   }
 })

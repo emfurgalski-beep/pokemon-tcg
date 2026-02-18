@@ -1,16 +1,52 @@
-# React + Vite
+# 🎴 From Alabastia - Pokemon TCG Database
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Polska baza kart Pokemon Trading Card Game.
 
-Currently, two official plugins are available:
+## 🚀 Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Frontend**: React 18 + Vite + React Router
+- **API**: Vercel Serverless Functions
+- **Data Source**: PokemonTCG/pokemon-tcg-data (GitHub)
+- **CDN**: jsDelivr (global, fast, no CORS)
+- **Hosting**: Vercel
 
-## React Compiler
+## 📦 Data Source
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Dane pobierane bezpośrednio z oficjalnego repozytorium:
+- Repo: `github.com/PokemonTCG/pokemon-tcg-data`
+- CDN: `cdn.jsdelivr.net/gh/PokemonTCG/pokemon-tcg-data@master`
 
-## Expanding the ESLint configuration
+Używamy JSON-ów zamiast API pokemontcg.io (brak CORS, klucze API, rate limits).
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 🛠️ Development
+
+```bash
+npm install
+npm run dev
+```
+
+## 🌐 Deployment
+
+Automatyczny deploy na Vercel po pushu do `main`.
+
+```bash
+git push origin main
+```
+
+## 📁 Structure
+
+```
+/api/tcg.js         - Serverless endpoint
+/src/pages/         - React pages
+/src/components/    - React components
+/src/styles/        - CSS files
+```
+
+## ✅ Features
+
+- ✅ Lista wszystkich setów Pokemon TCG
+- ✅ Grupowanie po seriach
+- ✅ Wyszukiwarka setów
+- ✅ Szybkie ładowanie (jsDelivr CDN)
+- 🚧 Lista kart w secie (in progress)
+- 🚧 Szczegóły karty (in progress)
