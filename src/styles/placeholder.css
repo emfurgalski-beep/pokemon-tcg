@@ -1,0 +1,129 @@
+.placeholder {
+  max-width: 680px;
+  margin: 60px auto;
+  text-align: center;
+}
+
+.placeholder__icon {
+  font-size: 64px;
+  margin-bottom: 24px;
+  filter: grayscale(0.3);
+}
+
+.placeholder__title {
+  font-size: 36px;
+  font-weight: 900;
+  letter-spacing: -0.8px;
+  margin: 0 0 16px;
+}
+
+.placeholder__text {
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--muted);
+  margin-bottom: 48px;
+}
+
+.placeholder__features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 48px;
+}
+
+.feature {
+  padding: 24px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: rgba(18, 21, 30, 0.5);
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.feature:hover {
+  transform: translateY(-4px);
+  border-color: rgba(245, 200, 66, 0.35);
+}
+
+.feature__icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+}
+
+.feature__title {
+  font-size: 15px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.feature__desc {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.placeholder__actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 32px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 20px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(11, 13, 19, 0.55);
+  font-weight: 800;
+  font-size: 14px;
+  transition: transform 0.15s, border-color 0.15s;
+  cursor: pointer;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+}
+
+.btnAccent {
+  border-color: rgba(245, 200, 66, 0.45);
+  background: rgba(245, 200, 66, 0.12);
+  color: var(--accent);
+}
+
+.btnAccent:hover {
+  border-color: rgba(245, 200, 66, 0.65);
+}
+
+.placeholder__footnote {
+  font-size: 13px;
+  color: var(--muted);
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.placeholder__footnote a {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.placeholder__footnote a:hover {
+  text-decoration: underline;
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .placeholder__title {
+    font-size: 28px;
+  }
+
+  .placeholder__features {
+    grid-template-columns: 1fr;
+  }
+}
