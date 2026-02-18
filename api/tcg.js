@@ -1,17 +1,9 @@
-// Multiple data sources as fallback
-const BACKUP_SOURCES = [
-  'https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/cards/en.json',
-  'https://cdn.jsdelivr.net/gh/PokemonTCG/pokemon-tcg-data@master/cards/en.json'
-]
-
-const SETS_SOURCES = [
-  'https://raw.githubusercontent.com/PokemonTCG/pokemon-tcg-data/master/sets/en.json',
-  'https://cdn.jsdelivr.net/gh/PokemonTCG/pokemon-tcg-data@master/sets/en.json'
-]
+// Using TCGdex API - free, unlimited, reliable
+const TCGDEX_BASE = 'https://api.tcgdex.net/v2/en'
 
 // In-memory cache
 let setsCache = null
-let cardsCache = null
+let cardsBySet = new Map()
 let cacheTime = null
 const CACHE_DURATION = 6 * 60 * 60 * 1000 // 6 hours
 
@@ -20,27 +12,10 @@ function setHeaders(res, seconds = 3600) {
   res.setHeader('Access-Control-Allow-Origin', '*')
 }
 
-async function fetchFromSources(sources) {
-  for (const url of sources) {
-    try {
-      console.log(`Trying ${url}`)
-      const r = await fetch(url, {
-        headers: { 'Accept': 'application/json' }
-      })
-      
-      if (r.ok) {
-        const data = await r.json()
-        console.log(`✓ Success from ${url}`)
-        return data
-      }
-      
-      console.log(`✗ Failed ${url}: HTTP ${r.status}`)
-    } catch (e) {
-      console.log(`✗ Failed ${url}:`, e.message)
-    }
-  }
-  
-  throw new Error('All data sources failed')
+async function fetchTCGdex(endpoint) {
+  const r = await fetch(`${TCGDEX_BASE}/${endpoint}`)
+  if (!r.ok) throw new Error(`TCGdex HTTP ${r.status}`)
+  return await r.json()
 }
 
 async function loadAllSets() {
@@ -49,20 +24,61 @@ async function loadAllSets() {
     return setsCache
   }
 
-  setsCache = await fetchFromSources(SETS_SOURCES)
+  // TCGdex returns sets in different format - adapt it
+  const sets = await fetchTCGdex('sets')
+  
+  // Convert TCGdex format to pokemontcg.io format
+  setsCache = sets.map(s => ({
+    id: s.id,
+    name: s.name,
+    series: s.serie?.name || s.serie || 'Unknown',
+    printedTotal: s.cardCount?.total || 0,
+    total: s.cardCount?.total || 0,
+    releaseDate: s.releaseDate,
+    images: {
+      logo: s.logo || `https://api.tcgdex.net/v2/en/sets/${s.id}/logo`,
+      symbol: s.symbol || `https://api.tcgdex.net/v2/en/sets/${s.id}/symbol`
+    }
+  }))
+  
   cacheTime = now
   return setsCache
 }
 
-async function loadAllCards() {
+async function loadSetCards(setId) {
   const now = Date.now()
-  if (cardsCache && cacheTime && (now - cacheTime < CACHE_DURATION)) {
-    return cardsCache
+  
+  if (cardsBySet.has(setId)) {
+    const cached = cardsBySet.get(setId)
+    if (cacheTime && (now - cacheTime < CACHE_DURATION)) {
+      return cached
+    }
   }
 
-  cardsCache = await fetchFromSources(BACKUP_SOURCES)
-  cacheTime = now
-  return cardsCache
+  // Fetch cards for specific set
+  const cards = await fetchTCGdex(`sets/${setId}`)
+  
+  // Convert format
+  const converted = (cards.cards || []).map(c => ({
+    id: c.id || `${setId}-${c.localId}`,
+    name: c.name,
+    number: c.localId,
+    rarity: c.rarity,
+    set: {
+      id: setId,
+      name: cards.name
+    },
+    images: {
+      small: c.image || `https://assets.tcgdex.net/en/${setId}/${c.localId}/low.webp`,
+      large: c.image || `https://assets.tcgdex.net/en/${setId}/${c.localId}/high.webp`
+    },
+    types: c.types || [],
+    hp: c.hp,
+    artist: c.illustrator
+  }))
+  
+  cardsBySet.set(setId, converted)
+  return converted
 }
 
 export default async function handler(req, res) {
@@ -87,11 +103,10 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Missing setId' })
       }
 
-      const allCards = await loadAllCards()
-      const filtered = allCards.filter(c => c?.set?.id === setId)
+      const cards = await loadSetCards(setId)
       
       setHeaders(res, 60 * 60)
-      return res.status(200).json({ data: filtered })
+      return res.status(200).json({ data: cards })
     }
 
     // Single card
@@ -101,15 +116,37 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Missing id' })
       }
 
-      const allCards = await loadAllCards()
-      const card = allCards.find(c => c?.id === id)
+      // TCGdex card ID format: setId-localId (e.g., "base1-4")
+      const parts = id.split('-')
+      if (parts.length < 2) {
+        return res.status(400).json({ error: 'Invalid card ID format (expected: setId-localId)' })
+      }
       
-      if (!card) {
-        return res.status(404).json({ error: 'Card not found' })
+      const setId = parts[0]
+      const localId = parts.slice(1).join('-')
+      
+      const card = await fetchTCGdex(`sets/${setId}/${localId}`)
+      
+      // Convert format
+      const converted = {
+        id: card.id || `${setId}-${localId}`,
+        name: card.name,
+        number: card.localId,
+        rarity: card.rarity,
+        set: card.set,
+        images: {
+          small: card.image || `https://assets.tcgdex.net/en/${setId}/${localId}/low.webp`,
+          large: card.image || `https://assets.tcgdex.net/en/${setId}/${localId}/high.webp`
+        },
+        types: card.types || [],
+        hp: card.hp,
+        artist: card.illustrator,
+        supertype: card.category,
+        subtypes: card.stage ? [card.stage] : []
       }
       
       setHeaders(res, 60 * 60)
-      return res.status(200).json({ data: card })
+      return res.status(200).json({ data: converted })
     }
 
     // Health
@@ -117,7 +154,8 @@ export default async function handler(req, res) {
       setHeaders(res, 60)
       return res.status(200).json({ 
         ok: true, 
-        cached: !!(setsCache && cardsCache)
+        source: 'TCGdex',
+        cached: !!setsCache
       })
     }
 
