@@ -243,7 +243,9 @@ export default function SetPage() {
             </div>
             {apiSource && (
               <div className="api-source-badge" title={`Data from ${apiSource}`}>
-                {apiSource === 'pokemontcg.io' ? '✓ Full data' : 'ℹ Basic data'}
+                {apiSource === 'pokemontcg.io' && '✓ Full data'}
+                {apiSource === 'tcgdex' && '✓ TCGdex data'}
+                {apiSource === 'github-cdn' && 'ℹ Basic data'}
               </div>
             )}
           </div>

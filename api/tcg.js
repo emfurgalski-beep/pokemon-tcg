@@ -1,9 +1,14 @@
-// Multi-source Pokemon TCG API with fallback strategy
-// Primary: pokemontcg.io (has variants, full data)
-// Fallback: GitHub CDN (basic data, no variants)
+// Multi-source Pokemon TCG API with triple fallback strategy
+// 1. Primary: pokemontcg.io (with API key if available) - has variants, full data
+// 2. Secondary: TCGdex - has variants, free, no key needed
+// 3. Tertiary: GitHub CDN - basic data, no variants, 99.9% uptime
 
 const POKEMONTCG_API_BASE = 'https://api.pokemontcg.io/v2'
+const TCGDEX_API_BASE = 'https://api.tcgdex.net/v2/en'
 const GITHUB_CDN_SETS = 'https://cdn.jsdelivr.net/gh/PokemonTCG/pokemon-tcg-data@master/sets/en.json'
+
+// Get API key from environment (optional)
+const POKEMONTCG_API_KEY = process.env.POKEMONTCG_API_KEY || null
 
 function getGithubCardsUrl(setId) {
   return `https://cdn.jsdelivr.net/gh/PokemonTCG/pokemon-tcg-data@master/cards/en/${setId}.json`
@@ -45,13 +50,58 @@ async function fetchWithTimeout(url, options = {}, timeout = 5000, retries = 2) 
   throw lastError
 }
 
-// Try pokemontcg.io, fallback to GitHub CDN
+// Convert TCGdex format to our standard format
+function convertTCGdexCard(card, setId) {
+  return {
+    id: card.id || `${setId}-${card.localId}`,
+    name: card.name,
+    supertype: card.category,
+    subtypes: card.stage ? [card.stage] : [],
+    hp: card.hp,
+    types: card.types || [],
+    number: card.localId,
+    rarity: card.rarity,
+    artist: card.illustrator,
+    images: {
+      small: card.image ? `${card.image}/low.webp` : null,
+      large: card.image ? `${card.image}/high.webp` : null
+    },
+    attacks: card.attacks?.map(a => ({
+      name: a.name,
+      cost: a.cost || [],
+      damage: a.damage,
+      text: a.effect
+    })) || [],
+    abilities: card.abilities?.map(ab => ({
+      name: ab.name,
+      text: ab.effect,
+      type: ab.type
+    })) || [],
+    weaknesses: card.weaknesses?.map(w => ({
+      type: w.type,
+      value: w.value
+    })) || [],
+    resistances: card.resistances?.map(r => ({
+      type: r.type,
+      value: r.value
+    })) || [],
+    retreatCost: card.retreat ? Array(card.retreat).fill('Colorless') : []
+  }
+}
+
+// Try all sources for sets
 async function fetchSets() {
+  // Try pokemontcg.io first
   try {
     console.log('[API] Trying pokemontcg.io for sets...')
-    const data = await fetchWithTimeout(`${POKEMONTCG_API_BASE}/sets`)
+    const headers = { 'Content-Type': 'application/json' }
+    if (POKEMONTCG_API_KEY) {
+      headers['X-Api-Key'] = POKEMONTCG_API_KEY
+      console.log('[API] Using API key')
+    }
     
-    // Transform to our format
+    const data = await fetchWithTimeout(`${POKEMONTCG_API_BASE}/sets`, { headers })
+    
     const sets = data.data.map(set => ({
       id: set.id,
       name: set.name,
@@ -69,62 +119,116 @@ async function fetchSets() {
     
   } catch (error) {
     console.warn('[API] pokemontcg.io failed:', error.message)
-    console.log('[API] Falling back to GitHub CDN...')
+  }
+
+  // Try TCGdex second
+  try {
+    console.log('[API] Trying TCGdex for sets...')
+    const data = await fetchWithTimeout(`${TCGDEX_API_BASE}/sets`)
     
-    try {
-      const sets = await fetchWithTimeout(GITHUB_CDN_SETS)
-      
-      // Add Scrydex logos
-      const enhanced = sets.map(set => ({
-        ...set,
-        images: {
-          logo: set.images?.logo || `https://images.scrydex.com/pokemon/${set.id}-logo/logo`,
-          symbol: set.images?.symbol || `https://images.scrydex.com/pokemon/${set.id}-symbol/symbol`
-        }
-      }))
-      
-      console.log('[API] GitHub CDN success:', enhanced.length, 'sets')
-      return { data: enhanced, source: 'github-cdn' }
-      
-    } catch (fallbackError) {
-      console.error('[API] All sources failed')
-      throw new Error('All data sources unavailable')
-    }
+    const sets = data.map(set => ({
+      id: set.id,
+      name: set.name,
+      series: set.serie?.name || 'Other',
+      total: set.cardCount?.total || 0,
+      releaseDate: set.releaseDate,
+      images: {
+        logo: set.logo ? `${set.logo}.png` : `https://images.scrydex.com/pokemon/${set.id}-logo/logo`,
+        symbol: set.symbol ? `${set.symbol}.png` : `https://images.scrydex.com/pokemon/${set.id}-symbol/symbol`
+      }
+    }))
+    
+    console.log('[API] TCGdex success:', sets.length, 'sets')
+    return { data: sets, source: 'tcgdex' }
+    
+  } catch (error) {
+    console.warn('[API] TCGdex failed:', error.message)
+  }
+
+  // Fallback to GitHub CDN
+  try {
+    console.log('[API] Falling back to GitHub CDN...')
+    const sets = await fetchWithTimeout(GITHUB_CDN_SETS)
+    
+    const enhanced = sets.map(set => ({
+      ...set,
+      images: {
+        logo: set.images?.logo || `https://images.scrydex.com/pokemon/${set.id}-logo/logo`,
+        symbol: set.images?.symbol || `https://images.scrydex.com/pokemon/${set.id}-symbol/symbol`
+      }
+    }))
+    
+    console.log('[API] GitHub CDN success:', enhanced.length, 'sets')
+    return { data: enhanced, source: 'github-cdn' }
+    
+  } catch (error) {
+    console.error('[API] All sources failed')
+    throw new Error('All data sources unavailable')
   }
 }
 
-// Try pokemontcg.io for cards (has variants), fallback to GitHub CDN
+// Try all sources for cards
 async function fetchCards(setId) {
+  // Try pokemontcg.io first
   try {
     console.log(`[API] Trying pokemontcg.io for cards (set: ${setId})...`)
-    const data = await fetchWithTimeout(`${POKEMONTCG_API_BASE}/cards?q=set.id:${setId}`)
+    const headers = { 'Content-Type': 'application/json' }
+    if (POKEMONTCG_API_KEY) {
+      headers['X-Api-Key'] = POKEMONTCG_API_KEY
+    }
+    
+    const data = await fetchWithTimeout(`${POKEMONTCG_API_BASE}/cards?q=set.id:${setId}`, { headers })
     
     console.log(`[API] pokemontcg.io success: ${data.data.length} cards (with variants)`)
     return { data: data.data, source: 'pokemontcg.io', hasVariants: true }
     
   } catch (error) {
     console.warn(`[API] pokemontcg.io failed:`, error.message)
-    console.log(`[API] Falling back to GitHub CDN...`)
+  }
+
+  // Try TCGdex second
+  try {
+    console.log(`[API] Trying TCGdex for cards (set: ${setId})...`)
+    const data = await fetchWithTimeout(`${TCGDEX_API_BASE}/sets/${setId}`)
     
-    try {
-      const cards = await fetchWithTimeout(getGithubCardsUrl(setId))
-      console.log(`[API] GitHub CDN success: ${cards.length} cards (no variants)`)
-      return { data: cards, source: 'github-cdn', hasVariants: false }
-      
-    } catch (fallbackError) {
-      console.error('[API] All sources failed')
-      throw new Error('All data sources unavailable')
+    if (data.cards && Array.isArray(data.cards)) {
+      const cards = data.cards.map(card => convertTCGdexCard(card, setId))
+      console.log(`[API] TCGdex success: ${cards.length} cards (with variants)`)
+      return { data: cards, source: 'tcgdex', hasVariants: true }
     }
+    
+    throw new Error('Invalid TCGdex response')
+    
+  } catch (error) {
+    console.warn(`[API] TCGdex failed:`, error.message)
+  }
+
+  // Fallback to GitHub CDN
+  try {
+    console.log(`[API] Falling back to GitHub CDN...`)
+    const cards = await fetchWithTimeout(getGithubCardsUrl(setId))
+    console.log(`[API] GitHub CDN success: ${cards.length} cards (no variants)`)
+    return { data: cards, source: 'github-cdn', hasVariants: false }
+    
+  } catch (error) {
+    console.error('[API] All sources failed')
+    throw new Error('All data sources unavailable')
   }
 }
 
-// Get single card
+// Try all sources for single card
 async function fetchCard(cardId) {
   const setId = cardId.split('-')[0]
   
+  // Try pokemontcg.io first
   try {
     console.log(`[API] Trying pokemontcg.io for card ${cardId}...`)
-    const data = await fetchWithTimeout(`${POKEMONTCG_API_BASE}/cards/${cardId}`)
+    const headers = { 'Content-Type': 'application/json' }
+    if (POKEMONTCG_API_KEY) {
+      headers['X-Api-Key'] = POKEMONTCG_API_KEY
+    }
+    
+    const data = await fetchWithTimeout(`${POKEMONTCG_API_BASE}/cards/${cardId}`, { headers })
     
     // Add set info
     const setsResult = await fetchSets()
@@ -146,38 +250,76 @@ async function fetchCard(cardId) {
     
   } catch (error) {
     console.warn(`[API] pokemontcg.io failed:`, error.message)
-    console.log(`[API] Falling back to GitHub CDN...`)
+  }
+
+  // Try TCGdex second
+  try {
+    console.log(`[API] Trying TCGdex for card ${cardId}...`)
+    const cardNumber = cardId.split('-')[1]
+    const data = await fetchWithTimeout(`${TCGDEX_API_BASE}/sets/${setId}`)
     
-    try {
-      const cards = await fetchWithTimeout(getGithubCardsUrl(setId))
-      const card = cards.find(c => c.id === cardId)
-      
-      if (!card) {
-        throw new Error('Card not found')
-      }
-      
-      // Add set info
-      const setsResult = await fetchSets()
-      const setInfo = setsResult.data.find(s => s.id === setId)
-      
-      if (setInfo) {
-        card.set = {
-          id: setInfo.id,
-          name: setInfo.name,
-          series: setInfo.series,
-          total: setInfo.total,
-          releaseDate: setInfo.releaseDate,
-          images: setInfo.images
+    if (data.cards) {
+      const card = data.cards.find(c => c.localId === cardNumber)
+      if (card) {
+        const converted = convertTCGdexCard(card, setId)
+        
+        // Add set info
+        const setsResult = await fetchSets()
+        const setInfo = setsResult.data.find(s => s.id === setId)
+        
+        if (setInfo) {
+          converted.set = {
+            id: setInfo.id,
+            name: setInfo.name,
+            series: setInfo.series,
+            total: setInfo.total,
+            releaseDate: setInfo.releaseDate,
+            images: setInfo.images
+          }
         }
+        
+        console.log(`[API] TCGdex card success`)
+        return { data: converted, source: 'tcgdex' }
       }
-      
-      console.log(`[API] GitHub CDN card success`)
-      return { data: card, source: 'github-cdn' }
-      
-    } catch (fallbackError) {
-      console.error('[API] All sources failed')
-      throw new Error('All data sources unavailable')
     }
+    
+    throw new Error('Card not found in TCGdex')
+    
+  } catch (error) {
+    console.warn(`[API] TCGdex failed:`, error.message)
+  }
+
+  // Fallback to GitHub CDN
+  try {
+    console.log(`[API] Falling back to GitHub CDN...`)
+    const cards = await fetchWithTimeout(getGithubCardsUrl(setId))
+    const card = cards.find(c => c.id === cardId)
+    
+    if (!card) {
+      throw new Error('Card not found')
+    }
+    
+    // Add set info
+    const setsResult = await fetchSets()
+    const setInfo = setsResult.data.find(s => s.id === setId)
+    
+    if (setInfo) {
+      card.set = {
+        id: setInfo.id,
+        name: setInfo.name,
+        series: setInfo.series,
+        total: setInfo.total,
+        releaseDate: setInfo.releaseDate,
+        images: setInfo.images
+      }
+    }
+    
+    console.log(`[API] GitHub CDN card success`)
+    return { data: card, source: 'github-cdn' }
+    
+  } catch (error) {
+    console.error('[API] All sources failed')
+    throw new Error('All data sources unavailable')
   }
 }
 
@@ -195,8 +337,9 @@ export default async function handler(req, res) {
       return res.status(200).json({ 
         ok: true,
         sources: {
-          primary: 'pokemontcg.io',
-          fallback: 'github-cdn'
+          primary: 'pokemontcg.io' + (POKEMONTCG_API_KEY ? ' (with API key)' : ' (no key)'),
+          secondary: 'tcgdex',
+          tertiary: 'github-cdn'
         }
       })
     }

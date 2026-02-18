@@ -12,11 +12,33 @@ Polska baza kart Pokemon Trading Card Game.
 
 ## 📦 Data Source
 
-Dane pobierane bezpośrednio z oficjalnego repozytorium:
-- Repo: `github.com/PokemonTCG/pokemon-tcg-data`
-- CDN: `cdn.jsdelivr.net/gh/PokemonTCG/pokemon-tcg-data@master`
+**Triple-fallback strategy for maximum reliability:**
 
-Używamy JSON-ów zamiast API pokemontcg.io (brak CORS, klucze API, rate limits).
+1. **pokemontcg.io** (Primary) - Full data with variants
+   - Optional API key for better reliability
+   - Get free key: https://dev.pokemontcg.io/
+
+2. **TCGdex** (Secondary) - Full data with variants
+   - Free, no key required
+   - Fast CDN
+
+3. **GitHub CDN** (Tertiary) - Basic data, no variants
+   - 99.9% uptime guarantee
+   - Always works as last resort
+
+**To add API key (optional but recommended):**
+```bash
+# Copy template
+cp .env.example .env
+
+# Add your key from https://dev.pokemontcg.io/
+POKEMONTCG_API_KEY=your-key-here
+```
+
+Deploy to Vercel:
+```bash
+vercel env add POKEMONTCG_API_KEY
+```
 
 ## 🛠️ Development
 
@@ -44,9 +66,16 @@ git push origin main
 
 ## ✅ Features
 
-- ✅ Lista wszystkich setów Pokemon TCG
+- ✅ Lista wszystkich setów Pokemon TCG (171+ sets)
 - ✅ Grupowanie po seriach
 - ✅ Wyszukiwarka setów
-- ✅ Szybkie ładowanie (jsDelivr CDN)
-- 🚧 Lista kart w secie (in progress)
-- 🚧 Szczegóły karty (in progress)
+- ✅ Filtry i sortowanie (seria, data, nazwa, liczba kart)
+- ✅ Strona setu z wszystkimi kartami
+- ✅ **Wykrywanie wariantów** (holo, reverse holo, normal)
+- ✅ Filtrowanie kart po typie Pokemon
+- ✅ Szczegóły karty (HP, ataki, słabości, odporności)
+- ✅ Breadcrumbs nawigacja
+- ✅ Statystyki (total cards, type distribution)
+- ✅ **Triple-source fallback** (pokemontcg.io → TCGdex → GitHub CDN)
+- ✅ Szybkie ładowanie (CDN + caching)
+- ✅ Responsive design
