@@ -27,13 +27,29 @@ async function loadAllSets() {
   // Get basic list first
   const setsList = await fetchTCGdex('sets')
   
-  // Load full details for ALL sets (includes releaseDate)
+  // Filter: Keep only English main sets (exclude Japanese, TCG Pocket, special editions)
+  const mainSets = setsList.filter(s => {
+    const id = s.id.toLowerCase()
+    
+    // Exclude Japanese sets
+    if (id.endsWith('_ja')) return false
+    
+    // Exclude TCG Pocket sets
+    if (id.startsWith('tcgp-')) return false
+    
+    // Exclude McDonald's promotional sets (keep only main releases)
+    // We'll keep them for now since Scrydex shows them
+    
+    return true
+  })
+  
+  // Load full details for filtered sets (includes releaseDate)
   // Do it in batches to avoid overwhelming the API
   const batchSize = 25
   const setsWithDetails = []
   
-  for (let i = 0; i < setsList.length; i += batchSize) {
-    const batch = setsList.slice(i, i + batchSize)
+  for (let i = 0; i < mainSets.length; i += batchSize) {
+    const batch = mainSets.slice(i, i + batchSize)
     const batchResults = await Promise.all(
       batch.map(async (s) => {
         try {
