@@ -12,6 +12,8 @@ export default function SetPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedType, setSelectedType] = useState(null)
   const [showVariants, setShowVariants] = useState(false)
+  const [apiSource, setApiSource] = useState(null)
+  const [hasVariants, setHasVariants] = useState(false)
 
   useEffect(() => {
     loadSetData()
@@ -25,7 +27,7 @@ export default function SetPage() {
       // Load set info
       const setsResponse = await fetch('/api/tcg?endpoint=sets')
       const setsData = await setsResponse.json()
-      console.log('Sets loaded:', setsData.data?.length)
+      console.log('Sets loaded:', setsData.data?.length, 'Source:', setsData.meta?.source)
       
       const set = setsData.data?.find(s => s.id === setId)
       console.log('Found set:', set)
@@ -40,12 +42,16 @@ export default function SetPage() {
       
       console.log('Cards response status:', cardsResponse.status)
       console.log('Cards data:', cardsData)
+      console.log('API Source:', cardsData.meta?.source)
+      console.log('Has Variants:', cardsData.meta?.hasVariants)
       
       if (!cardsResponse.ok) {
         throw new Error(cardsData.error || `HTTP ${cardsResponse.status}`)
       }
       
       setCards(cardsData.data || [])
+      setApiSource(cardsData.meta?.source)
+      setHasVariants(cardsData.meta?.hasVariants || false)
       console.log('Cards loaded:', cardsData.data?.length)
     } catch (err) {
       console.error('Load error:', err)
@@ -55,19 +61,17 @@ export default function SetPage() {
     }
   }
 
-  // Group cards by number to detect variants
+  // Group cards by name+number to detect variants
   const cardsWithVariants = useMemo(() => {
-    if (showVariants) {
-      // Show all cards individually
+    if (showVariants || !hasVariants) {
+      // Show all cards individually if variants toggled on OR source doesn't have variants
       return cards.map(card => ({ ...card, variantCount: 0 }))
     }
 
-    // Group by card number (base number without letter suffix)
+    // Group by name + number (pokemontcg.io has duplicate name+number for variants)
     const grouped = new Map()
     cards.forEach(card => {
-      // Extract base number (e.g., "1" from "1", "1a", "1b")
-      const baseNumber = card.number?.replace(/[a-zA-Z]+$/, '') || card.number
-      const key = `${card.name}-${baseNumber}` // Combine name + base number for unique grouping
+      const key = `${card.name}-${card.number}`
       
       if (!grouped.has(key)) {
         grouped.set(key, [])
@@ -78,12 +82,8 @@ export default function SetPage() {
     // Return first card from each group with variant count
     const result = []
     grouped.forEach(variants => {
-      // Sort variants by number (so "1" comes before "1a", "1b")
-      const sorted = variants.sort((a, b) => {
-        const numA = a.number || ''
-        const numB = b.number || ''
-        return numA.localeCompare(numB, undefined, { numeric: true })
-      })
+      // Sort variants by ID to get consistent first card
+      const sorted = variants.sort((a, b) => a.id.localeCompare(b.id))
       
       const firstCard = sorted[0]
       result.push({
@@ -95,11 +95,11 @@ export default function SetPage() {
 
     // Sort result by number
     return result.sort((a, b) => {
-      const numA = a.number || ''
-      const numB = b.number || ''
-      return numA.localeCompare(numB, undefined, { numeric: true })
+      const numA = parseInt(a.number) || 0
+      const numB = parseInt(b.number) || 0
+      return numA - numB
     })
-  }, [cards, showVariants])
+  }, [cards, showVariants, hasVariants])
 
   const filteredCards = cardsWithVariants.filter(card => {
     // Filter by search query
@@ -225,20 +225,27 @@ export default function SetPage() {
             className="search-input"
           />
           <div className="cards-controls-right">
-            <label className="variants-toggle">
-              <input
-                type="checkbox"
-                checked={showVariants}
-                onChange={(e) => setShowVariants(e.target.checked)}
-              />
-              <span>Show Variants</span>
-            </label>
+            {hasVariants && (
+              <label className="variants-toggle">
+                <input
+                  type="checkbox"
+                  checked={showVariants}
+                  onChange={(e) => setShowVariants(e.target.checked)}
+                />
+                <span>Show Variants</span>
+              </label>
+            )}
             <div className="cards-count">
               {filteredCards.length} / {cardsWithVariants.length} cards
-              {!showVariants && cards.length !== cardsWithVariants.length && (
+              {!showVariants && hasVariants && cards.length !== cardsWithVariants.length && (
                 <span className="variants-note"> ({cards.length} with variants)</span>
               )}
             </div>
+            {apiSource && (
+              <div className="api-source-badge" title={`Data from ${apiSource}`}>
+                {apiSource === 'pokemontcg.io' ? '✓ Full data' : 'ℹ Basic data'}
+              </div>
+            )}
           </div>
         </div>
 

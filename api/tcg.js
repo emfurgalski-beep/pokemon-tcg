@@ -1,11 +1,11 @@
-// Pokemon TCG API using jsDelivr CDN
-// Data source: github.com/PokemonTCG/pokemon-tcg-data
-// CDN: cdn.jsdelivr.net (fast, global, no CORS issues)
+// Multi-source Pokemon TCG API with fallback strategy
+// Primary: pokemontcg.io (has variants, full data)
+// Fallback: GitHub CDN (basic data, no variants)
 
-const SETS_URL = 'https://cdn.jsdelivr.net/gh/PokemonTCG/pokemon-tcg-data@master/sets/en.json'
+const POKEMONTCG_API_BASE = 'https://api.pokemontcg.io/v2'
+const GITHUB_CDN_SETS = 'https://cdn.jsdelivr.net/gh/PokemonTCG/pokemon-tcg-data@master/sets/en.json'
 
-// Cards are stored per-set, not in one big file
-function getCardsUrl(setId) {
+function getGithubCardsUrl(setId) {
   return `https://cdn.jsdelivr.net/gh/PokemonTCG/pokemon-tcg-data@master/cards/en/${setId}.json`
 }
 
@@ -14,14 +14,19 @@ function setCacheHeaders(res, seconds = 3600) {
   res.setHeader('Access-Control-Allow-Origin', '*')
 }
 
-async function fetchWithRetry(url, retries = 3) {
+// Fetch with timeout and retry
+async function fetchWithTimeout(url, options = {}, timeout = 5000, retries = 2) {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeout)
+  
   let lastError
-
-  for (let i = 0; i < retries; i++) {
+  for (let i = 0; i <= retries; i++) {
     try {
       const response = await fetch(url, {
-        headers: { 'Accept': 'application/json' }
+        ...options,
+        signal: controller.signal
       })
+      clearTimeout(timeoutId)
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`)
@@ -30,14 +35,150 @@ async function fetchWithRetry(url, retries = 3) {
       return await response.json()
     } catch (error) {
       lastError = error
-      // Exponential backoff: 200ms, 400ms, 800ms
-      if (i < retries - 1) {
-        await new Promise(resolve => setTimeout(resolve, 200 * Math.pow(2, i)))
+      if (i < retries) {
+        await new Promise(resolve => setTimeout(resolve, 300 * Math.pow(2, i)))
       }
     }
   }
-
+  
+  clearTimeout(timeoutId)
   throw lastError
+}
+
+// Try pokemontcg.io, fallback to GitHub CDN
+async function fetchSets() {
+  try {
+    console.log('[API] Trying pokemontcg.io for sets...')
+    const data = await fetchWithTimeout(`${POKEMONTCG_API_BASE}/sets`)
+    
+    // Transform to our format
+    const sets = data.data.map(set => ({
+      id: set.id,
+      name: set.name,
+      series: set.series,
+      total: set.total || set.printedTotal,
+      releaseDate: set.releaseDate,
+      images: {
+        logo: set.images?.logo || `https://images.scrydex.com/pokemon/${set.id}-logo/logo`,
+        symbol: set.images?.symbol || `https://images.scrydex.com/pokemon/${set.id}-symbol/symbol`
+      }
+    }))
+    
+    console.log('[API] pokemontcg.io success:', sets.length, 'sets')
+    return { data: sets, source: 'pokemontcg.io' }
+    
+  } catch (error) {
+    console.warn('[API] pokemontcg.io failed:', error.message)
+    console.log('[API] Falling back to GitHub CDN...')
+    
+    try {
+      const sets = await fetchWithTimeout(GITHUB_CDN_SETS)
+      
+      // Add Scrydex logos
+      const enhanced = sets.map(set => ({
+        ...set,
+        images: {
+          logo: set.images?.logo || `https://images.scrydex.com/pokemon/${set.id}-logo/logo`,
+          symbol: set.images?.symbol || `https://images.scrydex.com/pokemon/${set.id}-symbol/symbol`
+        }
+      }))
+      
+      console.log('[API] GitHub CDN success:', enhanced.length, 'sets')
+      return { data: enhanced, source: 'github-cdn' }
+      
+    } catch (fallbackError) {
+      console.error('[API] All sources failed')
+      throw new Error('All data sources unavailable')
+    }
+  }
+}
+
+// Try pokemontcg.io for cards (has variants), fallback to GitHub CDN
+async function fetchCards(setId) {
+  try {
+    console.log(`[API] Trying pokemontcg.io for cards (set: ${setId})...`)
+    const data = await fetchWithTimeout(`${POKEMONTCG_API_BASE}/cards?q=set.id:${setId}`)
+    
+    console.log(`[API] pokemontcg.io success: ${data.data.length} cards (with variants)`)
+    return { data: data.data, source: 'pokemontcg.io', hasVariants: true }
+    
+  } catch (error) {
+    console.warn(`[API] pokemontcg.io failed:`, error.message)
+    console.log(`[API] Falling back to GitHub CDN...`)
+    
+    try {
+      const cards = await fetchWithTimeout(getGithubCardsUrl(setId))
+      console.log(`[API] GitHub CDN success: ${cards.length} cards (no variants)`)
+      return { data: cards, source: 'github-cdn', hasVariants: false }
+      
+    } catch (fallbackError) {
+      console.error('[API] All sources failed')
+      throw new Error('All data sources unavailable')
+    }
+  }
+}
+
+// Get single card
+async function fetchCard(cardId) {
+  const setId = cardId.split('-')[0]
+  
+  try {
+    console.log(`[API] Trying pokemontcg.io for card ${cardId}...`)
+    const data = await fetchWithTimeout(`${POKEMONTCG_API_BASE}/cards/${cardId}`)
+    
+    // Add set info
+    const setsResult = await fetchSets()
+    const setInfo = setsResult.data.find(s => s.id === setId)
+    
+    if (setInfo) {
+      data.data.set = {
+        id: setInfo.id,
+        name: setInfo.name,
+        series: setInfo.series,
+        total: setInfo.total,
+        releaseDate: setInfo.releaseDate,
+        images: setInfo.images
+      }
+    }
+    
+    console.log(`[API] pokemontcg.io card success`)
+    return { data: data.data, source: 'pokemontcg.io' }
+    
+  } catch (error) {
+    console.warn(`[API] pokemontcg.io failed:`, error.message)
+    console.log(`[API] Falling back to GitHub CDN...`)
+    
+    try {
+      const cards = await fetchWithTimeout(getGithubCardsUrl(setId))
+      const card = cards.find(c => c.id === cardId)
+      
+      if (!card) {
+        throw new Error('Card not found')
+      }
+      
+      // Add set info
+      const setsResult = await fetchSets()
+      const setInfo = setsResult.data.find(s => s.id === setId)
+      
+      if (setInfo) {
+        card.set = {
+          id: setInfo.id,
+          name: setInfo.name,
+          series: setInfo.series,
+          total: setInfo.total,
+          releaseDate: setInfo.releaseDate,
+          images: setInfo.images
+        }
+      }
+      
+      console.log(`[API] GitHub CDN card success`)
+      return { data: card, source: 'github-cdn' }
+      
+    } catch (fallbackError) {
+      console.error('[API] All sources failed')
+      throw new Error('All data sources unavailable')
+    }
+  }
 }
 
 export default async function handler(req, res) {
@@ -52,27 +193,22 @@ export default async function handler(req, res) {
     if (endpoint === 'ping') {
       setCacheHeaders(res, 60)
       return res.status(200).json({ 
-        ok: true, 
-        source: 'jsDelivr CDN',
-        repo: 'PokemonTCG/pokemon-tcg-data'
+        ok: true,
+        sources: {
+          primary: 'pokemontcg.io',
+          fallback: 'github-cdn'
+        }
       })
     }
 
     // Get all sets
     if (endpoint === 'sets') {
-      const sets = await fetchWithRetry(SETS_URL)
-      
-      // Add Scrydex logo as fallback for sets without images
-      const enhancedSets = sets.map(set => ({
-        ...set,
-        images: {
-          logo: set.images?.logo || `https://images.scrydex.com/pokemon/${set.id}-logo/logo`,
-          symbol: set.images?.symbol || `https://images.scrydex.com/pokemon/${set.id}-symbol/symbol`
-        }
-      }))
-      
+      const result = await fetchSets()
       setCacheHeaders(res, 6 * 60 * 60) // Cache 6 hours
-      return res.status(200).json({ data: enhancedSets })
+      return res.status(200).json({ 
+        data: result.data,
+        meta: { source: result.source }
+      })
     }
 
     // Get cards for a specific set
@@ -83,11 +219,15 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Missing setId parameter' })
       }
 
-      const cardsUrl = getCardsUrl(setId)
-      const cards = await fetchWithRetry(cardsUrl)
-      
+      const result = await fetchCards(setId)
       setCacheHeaders(res, 60 * 60) // Cache 1 hour
-      return res.status(200).json({ data: cards })
+      return res.status(200).json({ 
+        data: result.data,
+        meta: { 
+          source: result.source,
+          hasVariants: result.hasVariants
+        }
+      })
     }
 
     // Get single card by ID
@@ -98,39 +238,12 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Missing id parameter' })
       }
 
-      // Extract set ID from card ID (format: setId-cardNumber, e.g., "base1-4")
-      const setId = cardId.split('-')[0]
-      
-      if (!setId) {
-        return res.status(400).json({ error: 'Invalid card ID format' })
-      }
-
-      // Load sets to get full set info
-      const sets = await fetchWithRetry(SETS_URL)
-      const setInfo = sets.find(s => s.id === setId)
-
-      const cardsUrl = getCardsUrl(setId)
-      const cards = await fetchWithRetry(cardsUrl)
-      const card = cards.find(c => c?.id === cardId)
-      
-      if (!card) {
-        return res.status(404).json({ error: 'Card not found' })
-      }
-
-      // Add full set info to card if we found it
-      if (setInfo) {
-        card.set = {
-          id: setInfo.id,
-          name: setInfo.name,
-          series: setInfo.series,
-          total: setInfo.total,
-          releaseDate: setInfo.releaseDate,
-          images: setInfo.images
-        }
-      }
-      
+      const result = await fetchCard(cardId)
       setCacheHeaders(res, 60 * 60) // Cache 1 hour
-      return res.status(200).json({ data: card })
+      return res.status(200).json({ 
+        data: result.data,
+        meta: { source: result.source }
+      })
     }
 
     return res.status(400).json({ 
@@ -139,7 +252,7 @@ export default async function handler(req, res) {
     })
 
   } catch (error) {
-    console.error('API Error:', error)
+    console.error('[API] Error:', error)
     return res.status(500).json({ 
       error: error.message || 'Internal server error' 
     })
