@@ -40,13 +40,28 @@ export default function ExpansionsPage() {
     )
   })
 
-  // Group by series
-  const groupedBySeries = filteredSets.reduce((acc, set) => {
+  // Sort by release date (newest first)
+  const sortedSets = [...filteredSets].sort((a, b) => {
+    const dateA = a.releaseDate ? new Date(a.releaseDate) : new Date(0)
+    const dateB = b.releaseDate ? new Date(b.releaseDate) : new Date(0)
+    return dateB - dateA // Newest first
+  })
+
+  // Group by series (maintaining date order within groups)
+  const groupedBySeries = sortedSets.reduce((acc, set) => {
     const series = set.series || 'Other'
     if (!acc[series]) acc[series] = []
     acc[series].push(set)
     return acc
   }, {})
+
+  // Sort series groups by the newest set in each series
+  const seriesWithNewestDate = Object.entries(groupedBySeries).map(([series, sets]) => {
+    const newestDate = sets[0]?.releaseDate ? new Date(sets[0].releaseDate) : new Date(0)
+    return { series, sets, newestDate }
+  })
+
+  const sortedSeriesGroups = seriesWithNewestDate.sort((a, b) => b.newestDate - a.newestDate)
 
   if (loading) {
     return <div className="loading">Loading expansions...</div>
@@ -74,7 +89,7 @@ export default function ExpansionsPage() {
           />
         </div>
 
-        {Object.entries(groupedBySeries).map(([series, seriesSets]) => (
+        {sortedSeriesGroups.map(({ series, sets: seriesSets }) => (
           <section key={series} className="series-section">
             <h2 className="series-title">{series}</h2>
             
