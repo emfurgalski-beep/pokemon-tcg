@@ -6,7 +6,7 @@ export default function Navbar() {
     <nav className="navbar">
       <div className="navbar-container">
         <Link to="/expansions" className="navbar-logo">
-          ⚡ From Alabastia
+          <img src="/logo.png" alt="From Alabastia" className="navbar-logo-img" />
         </Link>
         <div className="navbar-links">
           <Link to="/expansions" className="navbar-link">Expansions</Link>

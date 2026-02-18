@@ -17,12 +17,18 @@
 }
 
 .navbar-logo {
-  font-size: 1.5rem;
-  font-weight: 800;
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  display: flex;
+  align-items: center;
+}
+
+.navbar-logo-img {
+  height: 48px;
+  width: auto;
+  transition: transform 0.2s;
+}
+
+.navbar-logo-img:hover {
+  transform: scale(1.05);
 }
 
 .navbar-links {
