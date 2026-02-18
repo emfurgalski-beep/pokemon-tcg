@@ -92,6 +92,7 @@ export default function SetPage() {
             <div className="set-header-info">
               <h1>{setInfo.name}</h1>
               <div className="set-header-meta">
+                <span className="meta-badge">{setInfo.id}</span>
                 <span className="meta-badge">{setInfo.series}</span>
                 <span className="meta-badge">{setInfo.total} cards</span>
                 {setInfo.releaseDate && (
