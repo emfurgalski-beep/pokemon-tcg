@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import Breadcrumbs from '../components/Breadcrumbs'
 import BackButton from '../components/BackButton'
+import ShareButton from '../components/ShareButton'
+import SEO from '../components/SEO'
 import '../styles/card.css'
 
 export default function CardPage() {
@@ -52,6 +54,13 @@ export default function CardPage() {
 
   return (
     <div className="card-page">
+      <SEO 
+        title={`${card.name} - ${card.set?.name || 'Pokemon TCG'}`}
+        description={`${card.name} from ${card.set?.name || 'Pokemon TCG'}. ${card.hp ? `HP: ${card.hp}` : ''} ${card.types ? card.types.join(', ') + ' type' : ''}`}
+        image={card.images?.large || card.images?.small}
+        type="article"
+      />
+      
       <div className="container">
         <Breadcrumbs items={[
           { label: 'Expansions', to: '/expansions' },
@@ -63,6 +72,13 @@ export default function CardPage() {
           fallbackPath={`/expansions/${card.set?.id}`} 
           label="Back to Set" 
         />
+
+        <div className="card-actions">
+          <ShareButton 
+            title={`${card.name} - ${card.set?.name || 'Pokemon TCG'}`}
+            url={window.location.href}
+          />
+        </div>
 
         <div className="card-content">
           {/* Left: Card Image */}

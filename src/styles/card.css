@@ -3,6 +3,13 @@
   padding: 2rem 0;
 }
 
+.card-actions {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
 .card-content {
   display: grid;
   grid-template-columns: 1fr 1.5fr;
