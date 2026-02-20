@@ -192,7 +192,8 @@ export default function SetPage() {
       {/* Cards Section */}
       <div className="container">
         {/* Type Breakdown */}
-        {typeBreakdown.length > 0 && (
+        {/* Type Distribution - only in Cards view */}
+        {viewMode === 'cards' && typeBreakdown.length > 0 && (
           <div className="type-breakdown">
             <div className="breakdown-header">
               <h3 className="breakdown-title">Type Distribution</h3>
@@ -236,7 +237,9 @@ export default function SetPage() {
           </button>
         </div>
 
-        <div className="cards-controls">
+        {/* Cards Controls - only in Cards view */}
+        {viewMode === 'cards' && (
+          <div className="cards-controls">
           <input
             type="search"
             placeholder="Search cards by name, number, or rarity..."
@@ -270,6 +273,7 @@ export default function SetPage() {
             )}
           </div>
         </div>
+        )}
 
         {viewMode === 'cards' ? (
           // Cards View
