@@ -181,15 +181,16 @@
 
 .sort-dropdown {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  min-width: 200px;
+  align-items: center;
+  gap: 0.75rem;
+  white-space: nowrap;
 }
 
 .sort-label {
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--text);
+  flex-shrink: 0;
 }
 
 .sort-select {
