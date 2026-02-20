@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import Breadcrumbs from '../components/Breadcrumbs'
+import BackButton from '../components/BackButton'
 import '../styles/set.css'
 
 export default function SetPage() {
@@ -161,6 +162,8 @@ export default function SetPage() {
             { label: 'Expansions', to: '/expansions' },
             { label: setInfo.name }
           ]} />
+          
+          <BackButton fallbackPath="/expansions" label="Back to Expansions" />
           
           <div className="set-header-content">
             {setInfo.images?.logo && (

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import BackButton from '../components/BackButton'
 import '../styles/search-results.css'
 
 export default function SearchResultsPage() {
@@ -93,6 +94,8 @@ export default function SearchResultsPage() {
   return (
     <div className="search-results-page">
       <div className="container">
+        <BackButton fallbackPath="/expansions" label="Back" />
+
         <div className="search-header">
           <h1>Search Results</h1>
           <p className="search-query">

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import Breadcrumbs from '../components/Breadcrumbs'
+import BackButton from '../components/BackButton'
 import '../styles/card.css'
 
 export default function CardPage() {
@@ -57,6 +58,11 @@ export default function CardPage() {
           { label: card.set?.name || 'Set', to: `/expansions/${card.set?.id}` },
           { label: card.name }
         ]} />
+
+        <BackButton 
+          fallbackPath={`/expansions/${card.set?.id}`} 
+          label="Back to Set" 
+        />
 
         <div className="card-content">
           {/* Left: Card Image */}
