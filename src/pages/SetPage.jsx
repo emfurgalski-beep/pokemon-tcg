@@ -191,7 +191,22 @@ export default function SetPage() {
 
       {/* Cards Section */}
       <div className="container">
-        {/* Type Breakdown */}
+        {/* View Mode Toggle */}
+        <div className="view-mode-toggle">
+          <button
+            className={`view-mode-btn ${viewMode === 'cards' ? 'active' : ''}`}
+            onClick={() => setViewMode('cards')}
+          >
+            Cards
+          </button>
+          <button
+            className={`view-mode-btn ${viewMode === 'products' ? 'active' : ''}`}
+            onClick={() => setViewMode('products')}
+          >
+            Sealed Products
+          </button>
+        </div>
+
         {/* Type Distribution - only in Cards view */}
         {viewMode === 'cards' && typeBreakdown.length > 0 && (
           <div className="type-breakdown">
@@ -220,22 +235,6 @@ export default function SetPage() {
             </div>
           </div>
         )}
-
-        {/* View Mode Toggle */}
-        <div className="view-mode-toggle">
-          <button
-            className={`view-mode-btn ${viewMode === 'cards' ? 'active' : ''}`}
-            onClick={() => setViewMode('cards')}
-          >
-            Cards
-          </button>
-          <button
-            className={`view-mode-btn ${viewMode === 'products' ? 'active' : ''}`}
-            onClick={() => setViewMode('products')}
-          >
-            Sealed Products
-          </button>
-        </div>
 
         {/* Cards Controls - only in Cards view */}
         {viewMode === 'cards' && (
