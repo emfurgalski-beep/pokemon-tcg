@@ -15,6 +15,7 @@ export default function SetPage() {
   const [showVariants, setShowVariants] = useState(false)
   const [apiSource, setApiSource] = useState(null)
   const [hasVariants, setHasVariants] = useState(false)
+  const [viewMode, setViewMode] = useState('cards') // 'cards' or 'products'
 
   useEffect(() => {
     loadSetData()
@@ -219,6 +220,22 @@ export default function SetPage() {
           </div>
         )}
 
+        {/* View Mode Toggle */}
+        <div className="view-mode-toggle">
+          <button
+            className={`view-mode-btn ${viewMode === 'cards' ? 'active' : ''}`}
+            onClick={() => setViewMode('cards')}
+          >
+            Cards
+          </button>
+          <button
+            className={`view-mode-btn ${viewMode === 'products' ? 'active' : ''}`}
+            onClick={() => setViewMode('products')}
+          >
+            Sealed Products
+          </button>
+        </div>
+
         <div className="cards-controls">
           <input
             type="search"
@@ -254,10 +271,12 @@ export default function SetPage() {
           </div>
         </div>
 
-        {filteredCards.length === 0 ? (
-          <div className="no-cards">No cards found</div>
-        ) : (
-          <div className="cards-grid">
+        {viewMode === 'cards' ? (
+          // Cards View
+          filteredCards.length === 0 ? (
+            <div className="no-cards">No cards found</div>
+          ) : (
+            <div className="cards-grid">
             {filteredCards.map(card => (
               <Link
                 key={card.id}
@@ -287,6 +306,33 @@ export default function SetPage() {
                   </div>
                 </div>
               </Link>
+            ))}
+          </div>
+        )
+        ) : (
+          // Sealed Products View (Mock)
+          <div className="sealed-products-grid">
+            {[
+              { name: 'Booster Pack', price: '$4.99', image: setInfo.images?.logo },
+              { name: 'Booster Box', price: '$144.99', image: setInfo.images?.logo },
+              { name: 'Elite Trainer Box', price: '$49.99', image: setInfo.images?.logo },
+              { name: 'Booster Bundle', price: '$29.99', image: setInfo.images?.logo },
+              { name: 'Build & Battle Box', price: '$24.99', image: setInfo.images?.logo },
+              { name: 'Collection Box', price: '$34.99', image: setInfo.images?.logo },
+            ].map((product, idx) => (
+              <div key={idx} className="sealed-product-item">
+                <div className="sealed-product-image">
+                  {product.image && (
+                    <img src={product.image} alt={product.name} />
+                  )}
+                  <div className="sealed-overlay">{product.name}</div>
+                </div>
+                <div className="sealed-product-info">
+                  <h3>{product.name}</h3>
+                  <p className="sealed-price">{product.price}</p>
+                  <p className="sealed-note">Price data coming soon</p>
+                </div>
+              </div>
             ))}
           </div>
         )}
