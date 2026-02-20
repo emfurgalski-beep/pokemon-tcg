@@ -10,6 +10,11 @@ const GITHUB_CDN_SETS = 'https://cdn.jsdelivr.net/gh/PokemonTCG/pokemon-tcg-data
 // Get API key from environment (optional)
 const POKEMONTCG_API_KEY = process.env.POKEMONTCG_API_KEY || null
 
+// In-memory search index cache
+let searchIndexCache = null
+let searchIndexTimestamp = null
+const CACHE_TTL = 60 * 60 * 1000 // 1 hour
+
 function getGithubCardsUrl(setId) {
   return `https://cdn.jsdelivr.net/gh/PokemonTCG/pokemon-tcg-data@master/cards/en/${setId}.json`
 }
@@ -333,6 +338,100 @@ async function fetchCard(cardId) {
   }
 }
 
+// Build search index from all cards
+async function buildSearchIndex() {
+  console.log('[Search] Building search index...')
+  const startTime = Date.now()
+  
+  try {
+    // Get all sets
+    const setsResult = await fetchSets()
+    const sets = setsResult.data
+    
+    const index = []
+    let totalCards = 0
+    
+    // Load cards from all sets in parallel (batches of 20)
+    const BATCH_SIZE = 20
+    
+    for (let i = 0; i < sets.length; i += BATCH_SIZE) {
+      const batch = sets.slice(i, i + BATCH_SIZE)
+      
+      const batchPromises = batch.map(async (set) => {
+        try {
+          const cards = await fetchWithTimeout(getGithubCardsUrl(set.id), {}, 10000, 1)
+          
+          return cards.map(card => ({
+            id: card.id,
+            name: card.name?.toLowerCase() || '',
+            number: card.number?.toString() || '',
+            setId: set.id,
+            setName: set.name,
+            image: card.images?.small || '',
+            // Store only essential data for search
+          }))
+        } catch (error) {
+          console.error(`[Search] Failed to load set ${set.id}:`, error.message)
+          return []
+        }
+      })
+      
+      const batchResults = await Promise.all(batchPromises)
+      batchResults.forEach(cards => {
+        index.push(...cards)
+        totalCards += cards.length
+      })
+      
+      console.log(`[Search] Indexed ${totalCards} cards so far...`)
+    }
+    
+    const duration = Date.now() - startTime
+    console.log(`[Search] Index built: ${totalCards} cards in ${duration}ms`)
+    
+    return index
+  } catch (error) {
+    console.error('[Search] Failed to build index:', error)
+    throw error
+  }
+}
+
+// Get or refresh search index
+async function getSearchIndex() {
+  const now = Date.now()
+  
+  // Return cached index if still valid
+  if (searchIndexCache && searchIndexTimestamp && (now - searchIndexTimestamp < CACHE_TTL)) {
+    console.log('[Search] Using cached index')
+    return searchIndexCache
+  }
+  
+  // Build new index
+  console.log('[Search] Cache expired or missing, rebuilding...')
+  searchIndexCache = await buildSearchIndex()
+  searchIndexTimestamp = now
+  
+  return searchIndexCache
+}
+
+// Search through index
+async function searchIndex(query) {
+  const index = await getSearchIndex()
+  const searchQuery = query.toLowerCase().trim()
+  
+  if (!searchQuery || searchQuery.length < 2) {
+    return []
+  }
+  
+  // Search by name or number
+  const results = index.filter(card => 
+    card.name.includes(searchQuery) || 
+    card.number.includes(searchQuery)
+  )
+  
+  // Limit to 100 results
+  return results.slice(0, 100)
+}
+
 export default async function handler(req, res) {
   try {
     const endpoint = String(req.query.endpoint || '').trim()
@@ -379,6 +478,26 @@ export default async function handler(req, res) {
         meta: { 
           source: result.source,
           hasVariants: result.hasVariants
+        }
+      })
+    }
+
+    // Fast search endpoint
+    if (endpoint === 'search') {
+      const query = String(req.query.q || '').trim()
+      
+      if (!query || query.length < 2) {
+        return res.status(400).json({ error: 'Query must be at least 2 characters' })
+      }
+
+      const results = await searchIndex(query)
+      setCacheHeaders(res, 5 * 60) // Cache 5 minutes
+      return res.status(200).json({ 
+        data: results,
+        meta: {
+          query,
+          count: results.length,
+          cached: !!searchIndexCache
         }
       })
     }

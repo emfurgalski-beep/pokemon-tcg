@@ -25,41 +25,21 @@ export default function SearchResultsPage() {
       setLoading(true)
       setError(null)
       
-      // Get all sets
-      const setsResponse = await fetch('/api/tcg?endpoint=sets')
-      const setsData = await setsResponse.json()
-      const sets = setsData.data || []
-
-      // Search through all sets
-      const allResults = []
-      const searchQuery = query.toLowerCase()
-
-      for (const set of sets) {
-        try {
-          const cardsResponse = await fetch(`/api/tcg?endpoint=cards&setId=${set.id}`)
-          const cardsData = await cardsResponse.json()
-          const cards = cardsData.data || []
-
-          // Filter cards matching query
-          const matchingCards = cards.filter(card =>
-            card.name?.toLowerCase().includes(searchQuery) ||
-            card.number?.toString().includes(searchQuery)
-          )
-
-          // Add to results with set info
-          matchingCards.forEach(card => {
-            allResults.push({
-              ...card,
-              setName: set.name,
-              setId: set.id
-            })
-          })
-        } catch (error) {
-          console.error(`Failed to search set ${set.id}:`, error)
-        }
+      console.log(`[SearchResultsPage] Searching for: "${query}"`)
+      const startTime = Date.now()
+      
+      // Use fast search endpoint
+      const response = await fetch(`/api/tcg?endpoint=search&q=${encodeURIComponent(query)}`)
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Search failed')
       }
-
-      setResults(allResults)
+      
+      const duration = Date.now() - startTime
+      console.log(`[SearchResultsPage] Found ${data.data.length} results in ${duration}ms`)
+      
+      setResults(data.data)
     } catch (err) {
       console.error('Search error:', err)
       setError(err.message)
@@ -114,9 +94,9 @@ export default function SearchResultsPage() {
                 className="result-card"
               >
                 <div className="result-card-image-wrapper">
-                  {card.images?.small && (
+                  {card.image && (
                     <img
-                      src={card.images.small}
+                      src={card.image}
                       alt={card.name}
                       className="result-card-image"
                       loading="lazy"
