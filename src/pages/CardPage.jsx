@@ -12,6 +12,33 @@ export default function CardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  // Generate mock price based on rarity
+  function getMockPrice(card) {
+    const rarity = card.rarity || 'Common'
+    const basePrice = {
+      'Common': 0.25,
+      'Uncommon': 0.75,
+      'Rare': 3.00,
+      'Rare Holo': 8.00,
+      'Rare Holo EX': 15.00,
+      'Rare Holo GX': 12.00,
+      'Rare Holo V': 10.00,
+      'Rare Holo VMAX': 18.00,
+      'Rare Ultra': 25.00,
+      'Rare Secret': 45.00,
+      'Rare Rainbow': 60.00,
+      'Ultra Rare': 30.00,
+      'Secret Rare': 50.00,
+      'Rare ACE': 35.00,
+    }
+    
+    const base = basePrice[rarity] || 1.00
+    const variance = (parseInt(card.number) || 0) % 10
+    const price = base * (1 + variance * 0.15)
+    
+    return price.toFixed(2)
+  }
+
   useEffect(() => {
     loadCard()
   }, [cardId])
@@ -92,6 +119,11 @@ export default function CardPage() {
           {/* Right: Card Details */}
           <div className="card-details-section">
             <h1 className="card-title">{card.name}</h1>
+            
+            <div className="market-value">
+              <span className="market-value-label">Market Value</span>
+              <span className="market-value-price">${getMockPrice(card)}</span>
+            </div>
             
             <div className="card-meta-row">
               <span className="meta-badge">#{card.number}</span>
