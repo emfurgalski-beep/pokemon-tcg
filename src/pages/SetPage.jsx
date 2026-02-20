@@ -12,7 +12,7 @@ export default function SetPage() {
   const [error, setError] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedType, setSelectedType] = useState(null)
-  const [sortBy, setSortBy] = useState('number') // default sort by card number
+  const [sortBy, setSortBy] = useState('best-match') // default sort
   const [showVariants, setShowVariants] = useState(false)
   const [apiSource, setApiSource] = useState(null)
   const [hasVariants, setHasVariants] = useState(false)
@@ -130,11 +130,45 @@ export default function SetPage() {
     const sorted = [...filteredCards]
     
     switch (sortBy) {
-      case 'number':
+      case 'best-match':
+        // Default sort - by card number
         return sorted.sort((a, b) => {
           const numA = parseInt(a.number) || 0
           const numB = parseInt(b.number) || 0
           return numA - numB
+        })
+      
+      case 'value-high':
+        // TODO: Sort by price when price data available
+        // For now, sort by rarity as proxy
+        const rarityOrderHigh = { 
+          'Secret Rare': 6,
+          'Ultra Rare': 5, 
+          'Rare Holo': 4, 
+          'Rare': 3, 
+          'Uncommon': 2, 
+          'Common': 1 
+        }
+        return sorted.sort((a, b) => {
+          const orderA = rarityOrderHigh[a.rarity] || 0
+          const orderB = rarityOrderHigh[b.rarity] || 0
+          return orderB - orderA
+        })
+      
+      case 'value-low':
+        // TODO: Sort by price when price data available
+        const rarityOrderLow = { 
+          'Secret Rare': 6,
+          'Ultra Rare': 5, 
+          'Rare Holo': 4, 
+          'Rare': 3, 
+          'Uncommon': 2, 
+          'Common': 1 
+        }
+        return sorted.sort((a, b) => {
+          const orderA = rarityOrderLow[a.rarity] || 0
+          const orderB = rarityOrderLow[b.rarity] || 0
+          return orderA - orderB
         })
       
       case 'name-asc':
@@ -143,26 +177,35 @@ export default function SetPage() {
       case 'name-desc':
         return sorted.sort((a, b) => b.name.localeCompare(a.name))
       
-      case 'hp-high':
+      case 'number':
         return sorted.sort((a, b) => {
-          const hpA = parseInt(a.hp) || 0
-          const hpB = parseInt(b.hp) || 0
-          return hpB - hpA
+          const numA = parseInt(a.number) || 0
+          const numB = parseInt(b.number) || 0
+          return numA - numB
         })
       
-      case 'hp-low':
+      case 'number-desc':
         return sorted.sort((a, b) => {
-          const hpA = parseInt(a.hp) || 0
-          const hpB = parseInt(b.hp) || 0
-          return hpA - hpB
+          const numA = parseInt(a.number) || 0
+          const numB = parseInt(b.number) || 0
+          return numB - numA
         })
       
-      case 'rarity':
-        const rarityOrder = { 'Common': 1, 'Uncommon': 2, 'Rare': 3, 'Rare Holo': 4, 'Ultra Rare': 5 }
+      case 'cards-own':
+        // TODO: Implement when collection tracking added
+        // For now, just return sorted by number
         return sorted.sort((a, b) => {
-          const orderA = rarityOrder[a.rarity] || 0
-          const orderB = rarityOrder[b.rarity] || 0
-          return orderB - orderA
+          const numA = parseInt(a.number) || 0
+          const numB = parseInt(b.number) || 0
+          return numA - numB
+        })
+      
+      case 'cards-not-own':
+        // TODO: Implement when collection tracking added
+        return sorted.sort((a, b) => {
+          const numA = parseInt(a.number) || 0
+          const numB = parseInt(b.number) || 0
+          return numA - numB
         })
       
       default:
@@ -294,12 +337,15 @@ export default function SetPage() {
                 onChange={(e) => setSortBy(e.target.value)}
                 className="sort-select"
               >
-                <option value="number">Card Number (Low-Hi)</option>
-                <option value="name-asc">Alphabetical (A-Z)</option>
-                <option value="name-desc">Alphabetical (Z-A)</option>
-                <option value="hp-high">HP (High to Low)</option>
-                <option value="hp-low">HP (Low to High)</option>
-                <option value="rarity">Rarity (High to Low)</option>
+                <option value="best-match">Best Match</option>
+                <option value="value-high">Value High to Low</option>
+                <option value="value-low">Value Low to High</option>
+                <option value="name-asc">Alphabetical</option>
+                <option value="name-desc">Reverse Alphabetical</option>
+                <option value="number">Card Number Lo-Hi</option>
+                <option value="number-desc">Card Number Hi-Lo</option>
+                <option value="cards-own">Cards I Own</option>
+                <option value="cards-not-own">Cards I Do Not Own</option>
               </select>
             </div>
             <input
