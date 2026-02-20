@@ -1,5 +1,12 @@
 {
+  "buildCommand": "npm install && npm run build",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "crons": [
+    {
+      "path": "/api/tcg?endpoint=warmup",
+      "schedule": "0 * * * *"
+    }
   ]
 }

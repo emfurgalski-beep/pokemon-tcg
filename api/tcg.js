@@ -482,6 +482,31 @@ export default async function handler(req, res) {
       })
     }
 
+    // Warmup endpoint - pre-build search index
+    if (endpoint === 'warmup') {
+      console.log('[Warmup] Starting search index pre-build...')
+      const startTime = Date.now()
+      
+      try {
+        await getSearchIndex()
+        const duration = Date.now() - startTime
+        
+        setCacheHeaders(res, 60)
+        return res.status(200).json({ 
+          ok: true,
+          message: 'Search index warmed up',
+          duration: `${duration}ms`,
+          cached: !!searchIndexCache
+        })
+      } catch (error) {
+        console.error('[Warmup] Failed:', error)
+        return res.status(500).json({ 
+          ok: false,
+          error: error.message 
+        })
+      }
+    }
+
     // Fast search endpoint
     if (endpoint === 'search') {
       const query = String(req.query.q || '').trim()
@@ -500,6 +525,24 @@ export default async function handler(req, res) {
           cached: !!searchIndexCache
         }
       })
+    }
+
+    // Get lightweight search index for client-side search
+    if (endpoint === 'searchIndex') {
+      try {
+        const index = await getSearchIndex()
+        setCacheHeaders(res, 24 * 60 * 60) // Cache 24 hours
+        return res.status(200).json({ 
+          data: index,
+          meta: {
+            count: index.length,
+            cached: !!searchIndexCache
+          }
+        })
+      } catch (error) {
+        console.error('[SearchIndex] Failed:', error)
+        return res.status(500).json({ error: error.message })
+      }
     }
 
     // Get single card by ID

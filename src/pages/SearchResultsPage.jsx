@@ -9,50 +9,70 @@ export default function SearchResultsPage() {
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [searchIndex, setSearchIndex] = useState(null)
 
+  // Load search index once on mount
   useEffect(() => {
-    if (query.trim().length < 2) {
+    loadSearchIndex()
+  }, [])
+
+  // Search locally when query changes
+  useEffect(() => {
+    if (!searchIndex || query.trim().length < 2) {
       setResults([])
       setLoading(false)
       return
     }
 
-    searchCards()
-  }, [query])
+    performLocalSearch()
+  }, [query, searchIndex])
 
-  async function searchCards() {
+  async function loadSearchIndex() {
     try {
-      setLoading(true)
-      setError(null)
-      
-      console.log(`[SearchResultsPage] Searching for: "${query}"`)
+      console.log('[Search] Loading search index...')
       const startTime = Date.now()
       
-      // Use fast search endpoint
-      const response = await fetch(`/api/tcg?endpoint=search&q=${encodeURIComponent(query)}`)
+      const response = await fetch('/api/tcg?endpoint=searchIndex')
       const data = await response.json()
       
       if (!response.ok) {
-        throw new Error(data.error || 'Search failed')
+        throw new Error(data.error || 'Failed to load search index')
       }
       
       const duration = Date.now() - startTime
-      console.log(`[SearchResultsPage] Found ${data.data.length} results in ${duration}ms`)
+      console.log(`[Search] Index loaded: ${data.data.length} cards in ${duration}ms`)
       
-      setResults(data.data)
+      setSearchIndex(data.data)
     } catch (err) {
-      console.error('Search error:', err)
+      console.error('Failed to load search index:', err)
       setError(err.message)
-    } finally {
       setLoading(false)
     }
+  }
+
+  function performLocalSearch() {
+    const searchQuery = query.toLowerCase().trim()
+    
+    console.log(`[Search] Searching locally for: "${searchQuery}"`)
+    const startTime = Date.now()
+    
+    const filtered = searchIndex.filter(card =>
+      card.name.includes(searchQuery) ||
+      card.number.includes(searchQuery)
+    )
+    
+    const duration = Date.now() - startTime
+    console.log(`[Search] Found ${filtered.length} results in ${duration}ms`)
+    
+    setResults(filtered.slice(0, 100)) // Limit to 100 results
+    setLoading(false)
   }
 
   if (loading) {
     return (
       <div className="search-results-page">
         <div className="container">
-          <h1>Searching for "{query}"...</h1>
+          <h1>{searchIndex ? `Searching for "${query}"...` : 'Loading search index...'}</h1>
           <div className="loading-spinner" />
         </div>
       </div>
