@@ -17,6 +17,7 @@ export default function Navbar() {
           <ThemeToggle />
           <div className="navbar-links">
             <Link to="/expansions" className="navbar-link">Expansions</Link>
+            <Link to="/collection" className="navbar-link">My Collection</Link>
           </div>
         </div>
       </div>

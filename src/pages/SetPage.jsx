@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import Breadcrumbs from '../components/Breadcrumbs'
 import BackButton from '../components/BackButton'
 import { getMockPrice } from '../utils/price'
+import { getOwned, toggleCard, countOwnedInSet } from '../utils/collection'
 import '../styles/set.css'
 
 export default function SetPage() {
@@ -18,6 +19,8 @@ export default function SetPage() {
   const [apiSource, setApiSource] = useState(null)
   const [hasVariants, setHasVariants] = useState(false)
   const [viewMode, setViewMode] = useState('cards') // 'cards' or 'products'
+  const [selectedArtist, setSelectedArtist] = useState(null)
+  const [ownedCards, setOwnedCards] = useState(() => getOwned())
 
   useEffect(() => {
     loadSetData()
@@ -105,6 +108,20 @@ export default function SetPage() {
     })
   }, [cards, showVariants, hasVariants])
 
+  const artistList = useMemo(() => {
+    const artists = new Set()
+    cardsWithVariants.forEach(card => {
+      if (card.artist) artists.add(card.artist)
+    })
+    return [...artists].sort()
+  }, [cardsWithVariants])
+
+  function handleToggleOwned(cardId, e) {
+    e.preventDefault()
+    e.stopPropagation()
+    setOwnedCards(toggleCard(cardId))
+  }
+
   const filteredCards = cardsWithVariants.filter(card => {
     // Filter by search query
     if (searchQuery) {
@@ -122,6 +139,9 @@ export default function SetPage() {
       const hasType = card.types?.includes(selectedType)
       if (!hasType) return false
     }
+
+    // Filter by selected artist
+    if (selectedArtist && card.artist !== selectedArtist) return false
 
     return true
   })
@@ -193,26 +213,23 @@ export default function SetPage() {
         })
       
       case 'cards-own':
-        // TODO: Implement when collection tracking added
-        // For now, just return sorted by number
         return sorted.sort((a, b) => {
-          const numA = parseInt(a.number) || 0
-          const numB = parseInt(b.number) || 0
-          return numA - numB
+          const aOwned = ownedCards[a.id] ? 1 : 0
+          const bOwned = ownedCards[b.id] ? 1 : 0
+          return bOwned - aOwned
         })
-      
+
       case 'cards-not-own':
-        // TODO: Implement when collection tracking added
         return sorted.sort((a, b) => {
-          const numA = parseInt(a.number) || 0
-          const numB = parseInt(b.number) || 0
-          return numA - numB
+          const aOwned = ownedCards[a.id] ? 1 : 0
+          const bOwned = ownedCards[b.id] ? 1 : 0
+          return aOwned - bOwned
         })
       
       default:
         return sorted
     }
-  }, [filteredCards, sortBy])
+  }, [filteredCards, sortBy, ownedCards])
 
   // Calculate type breakdown for Pokemon cards
   const typeBreakdown = useMemo(() => {
@@ -274,6 +291,18 @@ export default function SetPage() {
                   <span className="meta-badge">{setInfo.releaseDate}</span>
                 )}
               </div>
+              {(() => {
+                const ownedCount = countOwnedInSet(setId, ownedCards)
+                const pct = Math.min(100, Math.round((ownedCount / setInfo.total) * 100))
+                return ownedCount > 0 ? (
+                  <div className="set-collection-progress">
+                    <span className="set-collection-label">Collection: {ownedCount} / {setInfo.total} ({pct}%)</span>
+                    <div className="set-progress-bar">
+                      <div className="set-progress-fill" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                ) : null
+              })()}
             </div>
           </div>
         </div>
@@ -337,6 +366,22 @@ export default function SetPage() {
               className="search-input"
             />
           <div className="cards-controls-right">
+            {artistList.length > 0 && (
+              <div className="sort-dropdown">
+                <label htmlFor="artist-select" className="sort-label">Artist</label>
+                <select
+                  id="artist-select"
+                  value={selectedArtist || ''}
+                  onChange={(e) => setSelectedArtist(e.target.value || null)}
+                  className="sort-select"
+                >
+                  <option value="">All Artists</option>
+                  {artistList.map(artist => (
+                    <option key={artist} value={artist}>{artist}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="sort-dropdown">
               <label htmlFor="sort-select" className="sort-label">Sort By</label>
               <select
@@ -393,7 +438,7 @@ export default function SetPage() {
               <Link
                 key={card.id}
                 to={`/cards/${card.id}`}
-                className="card-item"
+                className={`card-item${ownedCards[card.id] ? ' owned' : ''}`}
               >
                 <div className="card-image-wrapper">
                   <img
@@ -417,6 +462,12 @@ export default function SetPage() {
                       <span className="card-rarity">{card.rarity}</span>
                     )}
                   </div>
+                  <button
+                    className={`own-toggle${ownedCards[card.id] ? ' owned' : ''}`}
+                    onClick={(e) => handleToggleOwned(card.id, e)}
+                  >
+                    {ownedCards[card.id] ? '✓ Owned' : '+ Collect'}
+                  </button>
                 </div>
               </Link>
             ))}

@@ -39,6 +39,33 @@
   flex-wrap: wrap;
 }
 
+.set-collection-progress {
+  margin-top: 1rem;
+}
+
+.set-collection-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.set-progress-bar {
+  height: 8px;
+  background: var(--bg);
+  border-radius: 4px;
+  overflow: hidden;
+  max-width: 400px;
+}
+
+.set-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent) 0%, #10b981 100%);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
 .meta-badge {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -292,6 +319,41 @@
   transform: translateY(-8px);
   border-color: var(--accent);
   box-shadow: 0 20px 40px rgba(59, 130, 246, 0.2);
+}
+
+.card-item.owned {
+  border-color: #10b981;
+}
+
+.card-item.owned:hover {
+  border-color: #059669;
+  box-shadow: 0 20px 40px rgba(16, 185, 129, 0.2);
+}
+
+.own-toggle {
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 6px;
+  border: 2px solid var(--border);
+  background: var(--bg);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.own-toggle.owned {
+  background: #10b981;
+  border-color: #10b981;
+  color: white;
+}
+
+.own-toggle:hover:not(.owned) {
+  border-color: #10b981;
+  color: #10b981;
 }
 
 .card-image-wrapper {
