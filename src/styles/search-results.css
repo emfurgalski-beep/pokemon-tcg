@@ -23,6 +23,39 @@
   color: var(--accent);
 }
 
+.search-progress {
+  margin: 2rem 0;
+  text-align: center;
+}
+
+.progress-bar {
+  width: 100%;
+  max-width: 600px;
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 0 auto 1rem;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 1rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.progress-results {
+  font-size: 1.1rem;
+  color: var(--accent);
+  font-weight: 700;
+}
+
 .loading-spinner {
   width: 60px;
   height: 60px;
@@ -87,7 +120,7 @@
 
 .result-card-image-wrapper {
   aspect-ratio: 2.5 / 3.5;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  background: var(--bg);
   display: flex;
   align-items: center;
   justify-content: center;

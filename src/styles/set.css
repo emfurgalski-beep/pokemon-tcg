@@ -4,9 +4,10 @@
 
 /* Set Header */
 .set-header {
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  background: var(--bg-card);
   border-bottom: 2px solid var(--border);
   padding: 2rem 0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .set-header-content {
@@ -250,7 +251,7 @@
 
 .card-image-wrapper {
   aspect-ratio: 2.5 / 3.5;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  background: var(--bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -377,7 +378,7 @@
 .sealed-product-image {
   position: relative;
   aspect-ratio: 3 / 2;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  background: var(--bg);
   display: flex;
   align-items: center;
   justify-content: center;

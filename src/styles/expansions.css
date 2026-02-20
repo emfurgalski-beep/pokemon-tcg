@@ -3,7 +3,7 @@
 }
 
 .expansions-hero {
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  background: var(--bg-card);
   padding: 3rem 2rem;
   text-align: center;
   border-bottom: 1px solid var(--border);
@@ -162,7 +162,7 @@
 .set-logo-wrapper {
   position: relative;
   height: 180px;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  background: var(--bg);
   display: flex;
   align-items: center;
   justify-content: center;
