@@ -330,31 +330,185 @@
   box-shadow: 0 20px 40px rgba(16, 185, 129, 0.2);
 }
 
-.own-toggle {
-  width: 100%;
-  margin-top: 0.5rem;
-  padding: 0.375rem 0.5rem;
-  font-size: 0.75rem;
+.card-item.wanted {
+  border-color: #f59e0b;
+}
+
+.card-item.wanted:hover {
+  border-color: #d97706;
+  box-shadow: 0 20px 40px rgba(245, 158, 11, 0.2);
+}
+
+.card-item.owned.wanted {
+  border-color: #10b981;
+}
+
+/* Card image wrapper is now a Link */
+.card-image-wrapper {
+  text-decoration: none;
+  display: block;
+}
+
+/* Card name link */
+.card-item-name-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.card-item-name-link:hover .card-item-name {
+  color: var(--accent);
+}
+
+/* owned badge on image */
+.owned-badge {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  background: #10b981;
+  color: white;
+  font-size: 0.7rem;
   font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+/* Actions row */
+.card-item-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.qty-row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.qty-btn {
+  width: 26px;
+  height: 26px;
   border-radius: 6px;
   border: 2px solid var(--border);
   background: var(--bg);
-  color: var(--text-muted);
   cursor: pointer;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+
+.qty-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.qty-value {
+  font-size: 0.85rem;
+  font-weight: 700;
+  min-width: 2.5ch;
+  text-align: center;
+  color: var(--text);
+}
+
+.condition-select {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.35rem;
+  border-radius: 5px;
+  border: 2px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s;
+  margin-left: auto;
+}
+
+.condition-select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.collect-btn {
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  background: transparent;
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
   transition: all 0.2s;
   font-family: inherit;
 }
 
-.own-toggle.owned {
-  background: #10b981;
-  border-color: #10b981;
-  color: white;
-}
-
-.own-toggle:hover:not(.owned) {
+.collect-btn:hover {
   border-color: #10b981;
   color: #10b981;
 }
+
+/* Want + Binder row */
+.card-meta-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.want-btn {
+  background: none;
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  color: var(--text-muted);
+  padding: 0.2rem 0.45rem;
+  transition: all 0.2s;
+  font-family: inherit;
+  line-height: 1;
+}
+
+.want-btn.wanted {
+  color: #ef4444;
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.want-btn:hover {
+  color: #ef4444;
+  border-color: #ef4444;
+}
+
+.binder-select {
+  font-size: 0.8rem;
+  padding: 0.2rem 0.35rem;
+  border-radius: 5px;
+  border: 2px solid var(--border);
+  background: var(--bg);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+
+.binder-select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.binder-select:hover {
+  border-color: var(--accent);
+}
+
 
 .card-image-wrapper {
   aspect-ratio: 2.5 / 3.5;

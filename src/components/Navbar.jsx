@@ -18,6 +18,7 @@ export default function Navbar() {
           <div className="navbar-links">
             <Link to="/expansions" className="navbar-link">Expansions</Link>
             <Link to="/collection" className="navbar-link">My Collection</Link>
+            <Link to="/binders" className="navbar-link">Binders</Link>
           </div>
         </div>
       </div>

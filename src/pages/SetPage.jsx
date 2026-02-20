@@ -3,8 +3,12 @@ import { useParams, Link } from 'react-router-dom'
 import Breadcrumbs from '../components/Breadcrumbs'
 import BackButton from '../components/BackButton'
 import { getMockPrice } from '../utils/price'
-import { getOwned, toggleCard, countOwnedInSet } from '../utils/collection'
+import { getOwned, collectCard, decrementCard, setCardCondition, countOwnedInSet } from '../utils/collection'
+import { getWantList, toggleWant } from '../utils/wantlist'
+import { getBinders, addCardToBinder } from '../utils/binders'
 import '../styles/set.css'
+
+const CONDITIONS = ['NM', 'LP', 'MP', 'HP', 'D']
 
 export default function SetPage() {
   const { setId } = useParams()
@@ -14,48 +18,53 @@ export default function SetPage() {
   const [error, setError] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedType, setSelectedType] = useState(null)
-  const [sortBy, setSortBy] = useState('best-match') // default sort
+  const [sortBy, setSortBy] = useState('best-match')
   const [showVariants, setShowVariants] = useState(false)
   const [apiSource, setApiSource] = useState(null)
   const [hasVariants, setHasVariants] = useState(false)
-  const [viewMode, setViewMode] = useState('cards') // 'cards' or 'products'
+  const [viewMode, setViewMode] = useState('cards')
   const [selectedArtist, setSelectedArtist] = useState(null)
-  const [ownedCards, setOwnedCards] = useState(() => getOwned())
+  const [collection, setCollection] = useState(() => getOwned())
+  const [wantList, setWantList] = useState(() => getWantList())
+  const [binders, setBinders] = useState(() => getBinders())
 
   useEffect(() => {
     loadSetData()
   }, [setId])
 
+  // Refresh binders when switching back to this page
+  useEffect(() => {
+    setBinders(getBinders())
+  }, [])
+
   async function loadSetData() {
     try {
       setLoading(true)
       console.log('Loading set:', setId)
-      
-      // Load set info
+
       const setsResponse = await fetch('/api/tcg?endpoint=sets')
       const setsData = await setsResponse.json()
       console.log('Sets loaded:', setsData.data?.length, 'Source:', setsData.meta?.source)
-      
+
       const set = setsData.data?.find(s => s.id === setId)
       console.log('Found set:', set)
       setSetInfo(set)
 
-      // Load cards
       const cardsUrl = `/api/tcg?endpoint=cards&setId=${setId}`
       console.log('Fetching cards from:', cardsUrl)
-      
+
       const cardsResponse = await fetch(cardsUrl)
       const cardsData = await cardsResponse.json()
-      
+
       console.log('Cards response status:', cardsResponse.status)
       console.log('Cards data:', cardsData)
       console.log('API Source:', cardsData.meta?.source)
       console.log('Has Variants:', cardsData.meta?.hasVariants)
-      
+
       if (!cardsResponse.ok) {
         throw new Error(cardsData.error || `HTTP ${cardsResponse.status}`)
       }
-      
+
       setCards(cardsData.data || [])
       setApiSource(cardsData.meta?.source)
       setHasVariants(cardsData.meta?.hasVariants || false)
@@ -68,30 +77,43 @@ export default function SetPage() {
     }
   }
 
+  function handleCollect(card) {
+    setCollection(collectCard(card.id, getMockPrice(card), card.name))
+  }
+
+  function handleDecrement(cardId) {
+    setCollection(decrementCard(cardId))
+  }
+
+  function handleCondition(cardId, condition) {
+    setCollection(setCardCondition(cardId, condition))
+  }
+
+  function handleWant(card) {
+    setWantList(toggleWant(card))
+  }
+
+  function handleAddToBinder(binderId, card) {
+    addCardToBinder(binderId, card)
+    setBinders(getBinders())
+  }
+
   // Group cards by name+number to detect variants
   const cardsWithVariants = useMemo(() => {
     if (showVariants || !hasVariants) {
-      // Show all cards individually if variants toggled on OR source doesn't have variants
       return cards.map(card => ({ ...card, variantCount: 0 }))
     }
 
-    // Group by name + number (pokemontcg.io has duplicate name+number for variants)
     const grouped = new Map()
     cards.forEach(card => {
       const key = `${card.name}-${card.number}`
-      
-      if (!grouped.has(key)) {
-        grouped.set(key, [])
-      }
+      if (!grouped.has(key)) grouped.set(key, [])
       grouped.get(key).push(card)
     })
 
-    // Return first card from each group with variant count
     const result = []
     grouped.forEach(variants => {
-      // Sort variants by ID to get consistent first card
       const sorted = variants.sort((a, b) => a.id.localeCompare(b.id))
-      
       const firstCard = sorted[0]
       result.push({
         ...firstCard,
@@ -100,7 +122,6 @@ export default function SetPage() {
       })
     })
 
-    // Sort result by number
     return result.sort((a, b) => {
       const numA = parseInt(a.number) || 0
       const numB = parseInt(b.number) || 0
@@ -116,14 +137,7 @@ export default function SetPage() {
     return [...artists].sort()
   }, [cardsWithVariants])
 
-  function handleToggleOwned(cardId, e) {
-    e.preventDefault()
-    e.stopPropagation()
-    setOwnedCards(toggleCard(cardId))
-  }
-
   const filteredCards = cardsWithVariants.filter(card => {
-    // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
       const matchesSearch = (
@@ -134,108 +148,61 @@ export default function SetPage() {
       if (!matchesSearch) return false
     }
 
-    // Filter by selected type
     if (selectedType) {
-      const hasType = card.types?.includes(selectedType)
-      if (!hasType) return false
+      if (!card.types?.includes(selectedType)) return false
     }
 
-    // Filter by selected artist
     if (selectedArtist && card.artist !== selectedArtist) return false
 
     return true
   })
 
-  // Sort filtered cards
   const sortedCards = useMemo(() => {
     const sorted = [...filteredCards]
-    
+
     switch (sortBy) {
       case 'best-match':
-        // Default sort - by card number
-        return sorted.sort((a, b) => {
-          const numA = parseInt(a.number) || 0
-          const numB = parseInt(b.number) || 0
-          return numA - numB
-        })
-      
-      case 'value-high':
-        // TODO: Sort by price when price data available
-        // For now, sort by rarity as proxy
-        const rarityOrderHigh = { 
-          'Secret Rare': 6,
-          'Ultra Rare': 5, 
-          'Rare Holo': 4, 
-          'Rare': 3, 
-          'Uncommon': 2, 
-          'Common': 1 
-        }
-        return sorted.sort((a, b) => {
-          const orderA = rarityOrderHigh[a.rarity] || 0
-          const orderB = rarityOrderHigh[b.rarity] || 0
-          return orderB - orderA
-        })
-      
-      case 'value-low':
-        // TODO: Sort by price when price data available
-        const rarityOrderLow = { 
-          'Secret Rare': 6,
-          'Ultra Rare': 5, 
-          'Rare Holo': 4, 
-          'Rare': 3, 
-          'Uncommon': 2, 
-          'Common': 1 
-        }
-        return sorted.sort((a, b) => {
-          const orderA = rarityOrderLow[a.rarity] || 0
-          const orderB = rarityOrderLow[b.rarity] || 0
-          return orderA - orderB
-        })
-      
+        return sorted.sort((a, b) => (parseInt(a.number) || 0) - (parseInt(b.number) || 0))
+
+      case 'value-high': {
+        const rarityOrder = { 'Secret Rare': 6, 'Ultra Rare': 5, 'Rare Holo': 4, 'Rare': 3, 'Uncommon': 2, 'Common': 1 }
+        return sorted.sort((a, b) => (rarityOrder[b.rarity] || 0) - (rarityOrder[a.rarity] || 0))
+      }
+
+      case 'value-low': {
+        const rarityOrder = { 'Secret Rare': 6, 'Ultra Rare': 5, 'Rare Holo': 4, 'Rare': 3, 'Uncommon': 2, 'Common': 1 }
+        return sorted.sort((a, b) => (rarityOrder[a.rarity] || 0) - (rarityOrder[b.rarity] || 0))
+      }
+
       case 'name-asc':
         return sorted.sort((a, b) => a.name.localeCompare(b.name))
-      
+
       case 'name-desc':
         return sorted.sort((a, b) => b.name.localeCompare(a.name))
-      
+
       case 'number':
-        return sorted.sort((a, b) => {
-          const numA = parseInt(a.number) || 0
-          const numB = parseInt(b.number) || 0
-          return numA - numB
-        })
-      
+        return sorted.sort((a, b) => (parseInt(a.number) || 0) - (parseInt(b.number) || 0))
+
       case 'number-desc':
-        return sorted.sort((a, b) => {
-          const numA = parseInt(a.number) || 0
-          const numB = parseInt(b.number) || 0
-          return numB - numA
-        })
-      
+        return sorted.sort((a, b) => (parseInt(b.number) || 0) - (parseInt(a.number) || 0))
+
       case 'cards-own':
-        return sorted.sort((a, b) => {
-          const aOwned = ownedCards[a.id] ? 1 : 0
-          const bOwned = ownedCards[b.id] ? 1 : 0
-          return bOwned - aOwned
-        })
+        return sorted.sort((a, b) => (collection[b.id] ? 1 : 0) - (collection[a.id] ? 1 : 0))
 
       case 'cards-not-own':
-        return sorted.sort((a, b) => {
-          const aOwned = ownedCards[a.id] ? 1 : 0
-          const bOwned = ownedCards[b.id] ? 1 : 0
-          return aOwned - bOwned
-        })
-      
+        return sorted.sort((a, b) => (collection[a.id] ? 1 : 0) - (collection[b.id] ? 1 : 0))
+
+      case 'wanted':
+        return sorted.sort((a, b) => (wantList[b.id] ? 1 : 0) - (wantList[a.id] ? 1 : 0))
+
       default:
         return sorted
     }
-  }, [filteredCards, sortBy, ownedCards])
+  }, [filteredCards, sortBy, collection, wantList])
 
-  // Calculate type breakdown for Pokemon cards
   const typeBreakdown = useMemo(() => {
     const pokemonCards = cardsWithVariants.filter(c => c.supertype === 'Pokémon')
     const breakdown = {}
-    
     pokemonCards.forEach(card => {
       if (card.types && card.types.length > 0) {
         card.types.forEach(type => {
@@ -243,23 +210,14 @@ export default function SetPage() {
         })
       }
     })
-
-    return Object.entries(breakdown)
-      .sort((a, b) => b[1] - a[1]) // Sort by count descending
-      .slice(0, 8) // Top 8 types
+    return Object.entries(breakdown).sort((a, b) => b[1] - a[1]).slice(0, 8)
   }, [cardsWithVariants])
 
-  if (loading) {
-    return <div className="loading">Loading set...</div>
-  }
+  if (loading) return <div className="loading">Loading set...</div>
+  if (error) return <div className="error">Error: {error}</div>
+  if (!setInfo) return <div className="error">Set not found</div>
 
-  if (error) {
-    return <div className="error">Error: {error}</div>
-  }
-
-  if (!setInfo) {
-    return <div className="error">Set not found</div>
-  }
+  const binderList = Object.values(binders)
 
   return (
     <div className="set-page">
@@ -270,13 +228,13 @@ export default function SetPage() {
             { label: 'Expansions', to: '/expansions' },
             { label: setInfo.name }
           ]} />
-          
+
           <BackButton fallbackPath="/expansions" label="Back to Expansions" />
-          
+
           <div className="set-header-content">
             {setInfo.images?.logo && (
-              <img 
-                src={setInfo.images.logo} 
+              <img
+                src={setInfo.images.logo}
                 alt={setInfo.name}
                 className="set-header-logo"
               />
@@ -292,7 +250,7 @@ export default function SetPage() {
                 )}
               </div>
               {(() => {
-                const ownedCount = countOwnedInSet(setId, ownedCards)
+                const ownedCount = countOwnedInSet(setId, collection)
                 const pct = Math.min(100, Math.round((ownedCount / setInfo.total) * 100))
                 return ownedCount > 0 ? (
                   <div className="set-collection-progress">
@@ -326,16 +284,13 @@ export default function SetPage() {
           </button>
         </div>
 
-        {/* Type Distribution - only in Cards view */}
+        {/* Type Distribution */}
         {viewMode === 'cards' && typeBreakdown.length > 0 && (
           <div className="type-breakdown">
             <div className="breakdown-header">
               <h3 className="breakdown-title">Type Distribution</h3>
               {selectedType && (
-                <button 
-                  onClick={() => setSelectedType(null)} 
-                  className="clear-type-button"
-                >
+                <button onClick={() => setSelectedType(null)} className="clear-type-button">
                   Clear Filter
                 </button>
               )}
@@ -355,7 +310,7 @@ export default function SetPage() {
           </div>
         )}
 
-        {/* Cards Controls - only in Cards view */}
+        {/* Cards Controls */}
         {viewMode === 'cards' && (
           <div className="cards-controls">
             <input
@@ -399,6 +354,7 @@ export default function SetPage() {
                 <option value="number-desc">Card Number Hi-Lo</option>
                 <option value="cards-own">Cards I Own</option>
                 <option value="cards-not-own">Cards I Do Not Own</option>
+                <option value="wanted">My Want List First</option>
               </select>
             </div>
             {hasVariants && (
@@ -429,50 +385,92 @@ export default function SetPage() {
         )}
 
         {viewMode === 'cards' ? (
-          // Cards View
           sortedCards.length === 0 ? (
             <div className="no-cards">No cards found</div>
           ) : (
             <div className="cards-grid">
-            {sortedCards.map(card => (
-              <Link
-                key={card.id}
-                to={`/cards/${card.id}`}
-                className={`card-item${ownedCards[card.id] ? ' owned' : ''}`}
-              >
-                <div className="card-image-wrapper">
-                  <img
-                    src={card.images?.small || card.images?.large}
-                    alt={card.name}
-                    className="card-image"
-                    loading="lazy"
-                  />
-                  <div className="card-price-badge">${getMockPrice(card)}</div>
-                  {card.variantCount > 0 && (
-                    <div className="variant-badge">
-                      {card.variantCount} variants
-                    </div>
-                  )}
-                </div>
-                <div className="card-item-info">
-                  <div className="card-item-name">{card.name}</div>
-                  <div className="card-item-meta">
-                    <span className="card-number">#{card.number}</span>
-                    {card.rarity && (
-                      <span className="card-rarity">{card.rarity}</span>
-                    )}
-                  </div>
-                  <button
-                    className={`own-toggle${ownedCards[card.id] ? ' owned' : ''}`}
-                    onClick={(e) => handleToggleOwned(card.id, e)}
+              {sortedCards.map(card => {
+                const entry = collection[card.id]
+                const wanted = !!wantList[card.id]
+                return (
+                  <div
+                    key={card.id}
+                    className={`card-item${entry ? ' owned' : ''}${wanted ? ' wanted' : ''}`}
                   >
-                    {ownedCards[card.id] ? '✓ Owned' : '+ Collect'}
-                  </button>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )
+                    <Link to={`/cards/${card.id}`} className="card-image-wrapper">
+                      <img
+                        src={card.images?.small || card.images?.large}
+                        alt={card.name}
+                        className="card-image"
+                        loading="lazy"
+                      />
+                      <div className="card-price-badge">${getMockPrice(card)}</div>
+                      {entry && (
+                        <div className="owned-badge">✓ {entry.qty}×</div>
+                      )}
+                      {card.variantCount > 0 && (
+                        <div className="variant-badge">{card.variantCount} variants</div>
+                      )}
+                    </Link>
+                    <div className="card-item-info">
+                      <Link to={`/cards/${card.id}`} className="card-item-name-link">
+                        <div className="card-item-name">{card.name}</div>
+                        <div className="card-item-meta">
+                          <span className="card-number">#{card.number}</span>
+                          {card.rarity && <span className="card-rarity">{card.rarity}</span>}
+                        </div>
+                      </Link>
+                      <div className="card-item-actions">
+                        {entry ? (
+                          <div className="qty-row">
+                            <button className="qty-btn" onClick={() => handleDecrement(card.id)}>−</button>
+                            <span className="qty-value">{entry.qty}×</span>
+                            <button className="qty-btn" onClick={() => handleCollect(card)}>+</button>
+                            <select
+                              value={entry.condition}
+                              onChange={(e) => handleCondition(card.id, e.target.value)}
+                              className="condition-select"
+                            >
+                              {CONDITIONS.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                          </div>
+                        ) : (
+                          <button className="collect-btn" onClick={() => handleCollect(card)}>+ Collect</button>
+                        )}
+                        <div className="card-meta-actions">
+                          <button
+                            className={`want-btn${wanted ? ' wanted' : ''}`}
+                            onClick={() => handleWant(card)}
+                            title={wanted ? 'Remove from Want List' : 'Add to Want List'}
+                          >
+                            {wanted ? '♥' : '♡'}
+                          </button>
+                          {binderList.length > 0 && (
+                            <select
+                              value=""
+                              onChange={(e) => { if (e.target.value) handleAddToBinder(e.target.value, card) }}
+                              className="binder-select"
+                              title="Add to Binder"
+                            >
+                              <option value="">📚</option>
+                              {binderList.map(b => {
+                                const inBinder = b.cards.some(c => c.id === card.id)
+                                return (
+                                  <option key={b.id} value={b.id} disabled={inBinder}>
+                                    {inBinder ? '✓ ' : ''}{b.name}
+                                  </option>
+                                )
+                              })}
+                            </select>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )
         ) : (
           // Sealed Products View (Mock)
           <div className="sealed-products-grid">
@@ -486,9 +484,7 @@ export default function SetPage() {
             ].map((product, idx) => (
               <div key={idx} className="sealed-product-item">
                 <div className="sealed-product-image">
-                  {product.image && (
-                    <img src={product.image} alt={product.name} />
-                  )}
+                  {product.image && <img src={product.image} alt={product.name} />}
                   <div className="sealed-overlay">{product.name}</div>
                 </div>
                 <div className="sealed-product-info">
@@ -504,4 +500,3 @@ export default function SetPage() {
     </div>
   )
 }
-
