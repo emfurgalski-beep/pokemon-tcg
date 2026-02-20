@@ -12,6 +12,7 @@ export default function SetPage() {
   const [error, setError] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedType, setSelectedType] = useState(null)
+  const [sortBy, setSortBy] = useState('number') // default sort by card number
   const [showVariants, setShowVariants] = useState(false)
   const [apiSource, setApiSource] = useState(null)
   const [hasVariants, setHasVariants] = useState(false)
@@ -123,6 +124,51 @@ export default function SetPage() {
 
     return true
   })
+
+  // Sort filtered cards
+  const sortedCards = useMemo(() => {
+    const sorted = [...filteredCards]
+    
+    switch (sortBy) {
+      case 'number':
+        return sorted.sort((a, b) => {
+          const numA = parseInt(a.number) || 0
+          const numB = parseInt(b.number) || 0
+          return numA - numB
+        })
+      
+      case 'name-asc':
+        return sorted.sort((a, b) => a.name.localeCompare(b.name))
+      
+      case 'name-desc':
+        return sorted.sort((a, b) => b.name.localeCompare(a.name))
+      
+      case 'hp-high':
+        return sorted.sort((a, b) => {
+          const hpA = parseInt(a.hp) || 0
+          const hpB = parseInt(b.hp) || 0
+          return hpB - hpA
+        })
+      
+      case 'hp-low':
+        return sorted.sort((a, b) => {
+          const hpA = parseInt(a.hp) || 0
+          const hpB = parseInt(b.hp) || 0
+          return hpA - hpB
+        })
+      
+      case 'rarity':
+        const rarityOrder = { 'Common': 1, 'Uncommon': 2, 'Rare': 3, 'Rare Holo': 4, 'Ultra Rare': 5 }
+        return sorted.sort((a, b) => {
+          const orderA = rarityOrder[a.rarity] || 0
+          const orderB = rarityOrder[b.rarity] || 0
+          return orderB - orderA
+        })
+      
+      default:
+        return sorted
+    }
+  }, [filteredCards, sortBy])
 
   // Calculate type breakdown for Pokemon cards
   const typeBreakdown = useMemo(() => {
@@ -239,13 +285,31 @@ export default function SetPage() {
         {/* Cards Controls - only in Cards view */}
         {viewMode === 'cards' && (
           <div className="cards-controls">
-          <input
-            type="search"
-            placeholder="Search cards by name, number, or rarity..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="search-input"
-          />
+          <div className="cards-controls-left">
+            <div className="sort-dropdown">
+              <label htmlFor="sort-select" className="sort-label">Sort By</label>
+              <select
+                id="sort-select"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="sort-select"
+              >
+                <option value="number">Card Number (Low-Hi)</option>
+                <option value="name-asc">Alphabetical (A-Z)</option>
+                <option value="name-desc">Alphabetical (Z-A)</option>
+                <option value="hp-high">HP (High to Low)</option>
+                <option value="hp-low">HP (Low to High)</option>
+                <option value="rarity">Rarity (High to Low)</option>
+              </select>
+            </div>
+            <input
+              type="search"
+              placeholder="Search cards by name, number, or rarity..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="search-input"
+            />
+          </div>
           <div className="cards-controls-right">
             {hasVariants && (
               <label className="variants-toggle">
@@ -258,7 +322,7 @@ export default function SetPage() {
               </label>
             )}
             <div className="cards-count">
-              {filteredCards.length} / {cardsWithVariants.length} cards
+              {sortedCards.length} / {cardsWithVariants.length} cards
               {!showVariants && hasVariants && cards.length !== cardsWithVariants.length && (
                 <span className="variants-note"> ({cards.length} with variants)</span>
               )}
@@ -276,11 +340,11 @@ export default function SetPage() {
 
         {viewMode === 'cards' ? (
           // Cards View
-          filteredCards.length === 0 ? (
+          sortedCards.length === 0 ? (
             <div className="no-cards">No cards found</div>
           ) : (
             <div className="cards-grid">
-            {filteredCards.map(card => (
+            {sortedCards.map(card => (
               <Link
                 key={card.id}
                 to={`/cards/${card.id}`}
