@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import Breadcrumbs from '../components/Breadcrumbs'
 import BackButton from '../components/BackButton'
+import { getMockPrice, RARITY_ORDER } from '../utils/pricing'
 import '../styles/set.css'
 
 export default function SetPage() {
@@ -22,60 +23,21 @@ export default function SetPage() {
     loadSetData()
   }, [setId])
 
-  // Generate mock price based on rarity
-  function getMockPrice(card) {
-    const rarity = card.rarity || 'Common'
-    const basePrice = {
-      'Common': 0.25,
-      'Uncommon': 0.75,
-      'Rare': 3.00,
-      'Rare Holo': 8.00,
-      'Rare Holo EX': 15.00,
-      'Rare Holo GX': 12.00,
-      'Rare Holo V': 10.00,
-      'Rare Holo VMAX': 18.00,
-      'Rare Ultra': 25.00,
-      'Rare Secret': 45.00,
-      'Rare Rainbow': 60.00,
-      'Ultra Rare': 30.00,
-      'Secret Rare': 50.00,
-      'Rare ACE': 35.00,
-    }
-    
-    const base = basePrice[rarity] || 1.00
-    
-    // Add variance based on card number (deterministic)
-    const variance = (parseInt(card.number) || 0) % 10
-    const price = base * (1 + variance * 0.15)
-    
-    return price.toFixed(2)
-  }
-
   async function loadSetData() {
     try {
       setLoading(true)
-      console.log('Loading set:', setId)
       
       // Load set info
       const setsResponse = await fetch('/api/tcg?endpoint=sets')
       const setsData = await setsResponse.json()
-      console.log('Sets loaded:', setsData.data?.length, 'Source:', setsData.meta?.source)
       
       const set = setsData.data?.find(s => s.id === setId)
-      console.log('Found set:', set)
       setSetInfo(set)
 
       // Load cards
       const cardsUrl = `/api/tcg?endpoint=cards&setId=${setId}`
-      console.log('Fetching cards from:', cardsUrl)
-      
       const cardsResponse = await fetch(cardsUrl)
       const cardsData = await cardsResponse.json()
-      
-      console.log('Cards response status:', cardsResponse.status)
-      console.log('Cards data:', cardsData)
-      console.log('API Source:', cardsData.meta?.source)
-      console.log('Has Variants:', cardsData.meta?.hasVariants)
       
       if (!cardsResponse.ok) {
         throw new Error(cardsData.error || `HTTP ${cardsResponse.status}`)
@@ -84,9 +46,7 @@ export default function SetPage() {
       setCards(cardsData.data || [])
       setApiSource(cardsData.meta?.source)
       setHasVariants(cardsData.meta?.hasVariants || false)
-      console.log('Cards loaded:', cardsData.data?.length)
     } catch (err) {
-      console.error('Load error:', err)
       setError(err.message)
     } finally {
       setLoading(false)
@@ -133,112 +93,97 @@ export default function SetPage() {
     })
   }, [cards, showVariants, hasVariants])
 
-  const filteredCards = cardsWithVariants.filter(card => {
-    // Filter by search query
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      const matchesSearch = (
-        card.name?.toLowerCase().includes(query) ||
-        card.number?.toString().includes(query) ||
-        card.rarity?.toLowerCase().includes(query)
-      )
-      if (!matchesSearch) return false
-    }
+  const filteredCards = useMemo(() => {
+    return cardsWithVariants.filter(card => {
+      // Filter by search query
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase()
+        const matchesSearch = (
+          card.name?.toLowerCase().includes(query) ||
+          card.number?.toString().includes(query) ||
+          card.rarity?.toLowerCase().includes(query)
+        )
+        if (!matchesSearch) return false
+      }
 
-    // Filter by selected type
-    if (selectedType) {
-      const hasType = card.types?.includes(selectedType)
-      if (!hasType) return false
-    }
+      // Filter by selected type
+      if (selectedType) {
+        const hasType = card.types?.includes(selectedType)
+        if (!hasType) return false
+      }
 
-    return true
-  })
+      return true
+    })
+  }, [cardsWithVariants, searchQuery, selectedType])
 
   // Sort filtered cards
   const sortedCards = useMemo(() => {
     const sorted = [...filteredCards]
     
     switch (sortBy) {
-      case 'best-match':
+      case 'best-match': {
         // Default sort - by card number
         return sorted.sort((a, b) => {
           const numA = parseInt(a.number) || 0
           const numB = parseInt(b.number) || 0
           return numA - numB
         })
+      }
       
-      case 'value-high':
-        // TODO: Sort by price when price data available
-        // For now, sort by rarity as proxy
-        const rarityOrderHigh = { 
-          'Secret Rare': 6,
-          'Ultra Rare': 5, 
-          'Rare Holo': 4, 
-          'Rare': 3, 
-          'Uncommon': 2, 
-          'Common': 1 
-        }
+      case 'value-high': {
+        // Sort by rarity (proxy for price)
         return sorted.sort((a, b) => {
-          const orderA = rarityOrderHigh[a.rarity] || 0
-          const orderB = rarityOrderHigh[b.rarity] || 0
+          const orderA = RARITY_ORDER[a.rarity] || 0
+          const orderB = RARITY_ORDER[b.rarity] || 0
           return orderB - orderA
         })
+      }
       
-      case 'value-low':
-        // TODO: Sort by price when price data available
-        const rarityOrderLow = { 
-          'Secret Rare': 6,
-          'Ultra Rare': 5, 
-          'Rare Holo': 4, 
-          'Rare': 3, 
-          'Uncommon': 2, 
-          'Common': 1 
-        }
+      case 'value-low': {
         return sorted.sort((a, b) => {
-          const orderA = rarityOrderLow[a.rarity] || 0
-          const orderB = rarityOrderLow[b.rarity] || 0
+          const orderA = RARITY_ORDER[a.rarity] || 0
+          const orderB = RARITY_ORDER[b.rarity] || 0
           return orderA - orderB
         })
+      }
       
-      case 'name-asc':
+      case 'name-asc': {
         return sorted.sort((a, b) => a.name.localeCompare(b.name))
+      }
       
-      case 'name-desc':
+      case 'name-desc': {
         return sorted.sort((a, b) => b.name.localeCompare(a.name))
+      }
       
-      case 'number':
+      case 'number': {
         return sorted.sort((a, b) => {
           const numA = parseInt(a.number) || 0
           const numB = parseInt(b.number) || 0
           return numA - numB
         })
+      }
       
-      case 'number-desc':
+      case 'number-desc': {
         return sorted.sort((a, b) => {
           const numA = parseInt(a.number) || 0
           const numB = parseInt(b.number) || 0
           return numB - numA
         })
+      }
       
       case 'cards-own':
-        // TODO: Implement when collection tracking added
-        // For now, just return sorted by number
-        return sorted.sort((a, b) => {
-          const numA = parseInt(a.number) || 0
-          const numB = parseInt(b.number) || 0
-          return numA - numB
-        })
-      
-      case 'cards-not-own':
+      case 'cards-not-own': {
         // TODO: Implement when collection tracking added
         return sorted.sort((a, b) => {
           const numA = parseInt(a.number) || 0
           const numB = parseInt(b.number) || 0
           return numA - numB
         })
+      }
       
-      default:
+      default: {
         return sorted
+      }
     }
   }, [filteredCards, sortBy])
 
