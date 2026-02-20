@@ -26,11 +26,13 @@ function setCacheHeaders(res, seconds = 3600) {
 
 // Fetch with timeout and retry
 async function fetchWithTimeout(url, options = {}, timeout = 5000, retries = 2) {
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), timeout)
-  
   let lastError
+  
   for (let i = 0; i <= retries; i++) {
+    // Create NEW controller for each attempt (bug fix)
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), timeout)
+    
     try {
       const response = await fetch(url, {
         ...options,
@@ -44,14 +46,15 @@ async function fetchWithTimeout(url, options = {}, timeout = 5000, retries = 2) 
       
       return await response.json()
     } catch (error) {
+      clearTimeout(timeoutId)
       lastError = error
+      
       if (i < retries) {
         await new Promise(resolve => setTimeout(resolve, 300 * Math.pow(2, i)))
       }
     }
   }
   
-  clearTimeout(timeoutId)
   throw lastError
 }
 
@@ -94,8 +97,18 @@ function convertTCGdexCard(card, setId) {
   }
 }
 
+// Cache for sets to avoid redundant fetches
+let setsCache = null
+let setsCacheTimestamp = null
+const SETS_CACHE_TTL = 24 * 60 * 60 * 1000 // 24 hours
+
 // Try all sources for sets
 async function fetchSets() {
+  // Return cached sets if available and fresh
+  if (setsCache && setsCacheTimestamp && (Date.now() - setsCacheTimestamp < SETS_CACHE_TTL)) {
+    return setsCache
+  }
+  
   // TEMPORARY: Skip pokemontcg.io and TCGdex until they're stable
   // TODO: Re-enable when APIs are working
   
@@ -169,7 +182,13 @@ async function fetchSets() {
     }))
     
     console.log('[API] GitHub CDN success:', enhanced.length, 'sets')
-    return { data: enhanced, source: 'github-cdn' }
+    
+    // Cache the result
+    const result = { data: enhanced, source: 'github-cdn' }
+    setsCache = result
+    setsCacheTimestamp = Date.now()
+    
+    return result
     
   } catch (error) {
     console.error('[API] GitHub CDN failed')
