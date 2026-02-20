@@ -328,7 +328,14 @@ export default function SetPage() {
         {/* Cards Controls - only in Cards view */}
         {viewMode === 'cards' && (
           <div className="cards-controls">
-          <div className="cards-controls-left">
+            <input
+              type="search"
+              placeholder="Search cards by name, number, or rarity..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="search-input"
+            />
+          <div className="cards-controls-right">
             <div className="sort-dropdown">
               <label htmlFor="sort-select" className="sort-label">Sort By</label>
               <select
@@ -348,15 +355,6 @@ export default function SetPage() {
                 <option value="cards-not-own">Cards I Do Not Own</option>
               </select>
             </div>
-            <input
-              type="search"
-              placeholder="Search cards by name, number, or rarity..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="search-input"
-            />
-          </div>
-          <div className="cards-controls-right">
             {hasVariants && (
               <label className="variants-toggle">
                 <input
