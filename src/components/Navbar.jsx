@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import GlobalSearch from './GlobalSearch'
+import ThemeToggle from './ThemeToggle'
 import '../styles/navbar.css'
 
 export default function Navbar() {
@@ -12,8 +13,11 @@ export default function Navbar() {
         
         <GlobalSearch />
         
-        <div className="navbar-links">
-          <Link to="/expansions" className="navbar-link">Expansions</Link>
+        <div className="navbar-right">
+          <ThemeToggle />
+          <div className="navbar-links">
+            <Link to="/expansions" className="navbar-link">Expansions</Link>
+          </div>
         </div>
       </div>
     </nav>

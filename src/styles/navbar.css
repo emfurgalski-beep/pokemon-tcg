@@ -33,6 +33,12 @@
   transform: scale(1.05);
 }
 
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .navbar-links {
   display: flex;
   gap: 2rem;

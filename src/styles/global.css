@@ -5,6 +5,7 @@
 }
 
 :root {
+  /* Dark theme (default) */
   --bg: #0a0e1a;
   --bg-card: #1e293b;
   --border: #334155;
@@ -14,11 +15,44 @@
   --accent-hover: #60a5fa;
 }
 
+/* Light theme - WCAG 2.1 AA compliant */
+[data-theme="light"] {
+  --bg: #f8fafc;
+  --bg-card: #ffffff;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --text-muted: #475569;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+}
+
+/* Smooth theme transitions */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   background: var(--bg);
   color: var(--text);
   line-height: 1.6;
+}
+
+/* WCAG 2.1: Skip to main content link */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: var(--accent);
+  color: white;
+  padding: 0.5rem 1rem;
+  text-decoration: none;
+  z-index: 9999;
+  font-weight: 600;
+}
+
+.skip-link:focus {
+  top: 0;
 }
 
 a {
@@ -43,3 +77,24 @@ a {
   padding: 4rem;
   color: #ef4444;
 }
+
+/* WCAG 2.1: Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* WCAG 2.1: High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --border: #666;
+  }
+  
+  [data-theme="light"] {
+    --border: #333;
+  }
+}
+
