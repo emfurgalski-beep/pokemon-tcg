@@ -4,10 +4,12 @@ import ExpansionsPage from './pages/ExpansionsPage'
 import SetPage from './pages/SetPage'
 import CardPage from './pages/CardPage'
 import SearchResultsPage from './pages/SearchResultsPage'
+import CollectionPage from './pages/CollectionPage'
+import { CollectionProvider } from './context/CollectionContext'
 
 export default function App() {
   return (
-    <>
+    <CollectionProvider>
       <Navbar />
       <Routes>
         <Route path="/" element={<Navigate to="/expansions" replace />} />
@@ -15,8 +17,9 @@ export default function App() {
         <Route path="/expansions/:setId" element={<SetPage />} />
         <Route path="/cards/:cardId" element={<CardPage />} />
         <Route path="/search" element={<SearchResultsPage />} />
+        <Route path="/collection" element={<CollectionPage />} />
         <Route path="*" element={<Navigate to="/expansions" replace />} />
       </Routes>
-    </>
+    </CollectionProvider>
   )
 }

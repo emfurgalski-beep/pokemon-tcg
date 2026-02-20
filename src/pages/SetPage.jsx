@@ -3,7 +3,9 @@ import { useParams, Link } from 'react-router-dom'
 import Breadcrumbs from '../components/Breadcrumbs'
 import BackButton from '../components/BackButton'
 import { getMockPrice, RARITY_ORDER } from '../utils/pricing'
+import { useCollection } from '../context/CollectionContext'
 import '../styles/set.css'
+import '../styles/collection.css'
 
 export default function SetPage() {
   const { setId } = useParams()
@@ -18,6 +20,8 @@ export default function SetPage() {
   const [apiSource, setApiSource] = useState(null)
   const [hasVariants, setHasVariants] = useState(false)
   const [viewMode, setViewMode] = useState('cards') // 'cards' or 'products'
+  const [ownedFilter, setOwnedFilter] = useState('all') // 'all' | 'owned' | 'missing'
+  const { isOwned, getCount } = useCollection()
 
   useEffect(() => {
     loadSetData()
@@ -112,9 +116,13 @@ export default function SetPage() {
         if (!hasType) return false
       }
 
+      // Filter by owned status
+      if (ownedFilter === 'owned' && !isOwned(card.id)) return false
+      if (ownedFilter === 'missing' && isOwned(card.id)) return false
+
       return true
     })
-  }, [cardsWithVariants, searchQuery, selectedType])
+  }, [cardsWithVariants, searchQuery, selectedType, ownedFilter, isOwned])
 
   // Sort filtered cards
   const sortedCards = useMemo(() => {
@@ -171,13 +179,23 @@ export default function SetPage() {
         })
       }
       
-      case 'cards-own':
-      case 'cards-not-own': {
-        // TODO: Implement when collection tracking added
+      case 'cards-own': {
+        // Owned cards first, then by number
         return sorted.sort((a, b) => {
-          const numA = parseInt(a.number) || 0
-          const numB = parseInt(b.number) || 0
-          return numA - numB
+          const ownedA = isOwned(a.id) ? 0 : 1
+          const ownedB = isOwned(b.id) ? 0 : 1
+          if (ownedA !== ownedB) return ownedA - ownedB
+          return (parseInt(a.number) || 0) - (parseInt(b.number) || 0)
+        })
+      }
+
+      case 'cards-not-own': {
+        // Missing cards first, then by number
+        return sorted.sort((a, b) => {
+          const missingA = isOwned(a.id) ? 1 : 0
+          const missingB = isOwned(b.id) ? 1 : 0
+          if (missingA !== missingB) return missingA - missingB
+          return (parseInt(a.number) || 0) - (parseInt(b.number) || 0)
         })
       }
       
@@ -185,7 +203,7 @@ export default function SetPage() {
         return sorted
       }
     }
-  }, [filteredCards, sortBy])
+  }, [filteredCards, sortBy, isOwned])
 
   // Calculate type breakdown for Pokemon cards
   const typeBreakdown = useMemo(() => {
@@ -310,6 +328,20 @@ export default function SetPage() {
               className="search-input"
             />
           <div className="cards-controls-right">
+            <div className="owned-filter">
+              <button
+                className={`owned-filter-btn ${ownedFilter === 'all' ? 'active' : ''}`}
+                onClick={() => setOwnedFilter('all')}
+              >All</button>
+              <button
+                className={`owned-filter-btn ${ownedFilter === 'owned' ? 'active-green' : ''}`}
+                onClick={() => setOwnedFilter(ownedFilter === 'owned' ? 'all' : 'owned')}
+              >Owned</button>
+              <button
+                className={`owned-filter-btn ${ownedFilter === 'missing' ? 'active' : ''}`}
+                onClick={() => setOwnedFilter(ownedFilter === 'missing' ? 'all' : 'missing')}
+              >Missing</button>
+            </div>
             <div className="sort-dropdown">
               <label htmlFor="sort-select" className="sort-label">Sort By</label>
               <select
@@ -366,7 +398,7 @@ export default function SetPage() {
               <Link
                 key={card.id}
                 to={`/cards/${card.id}`}
-                className="card-item"
+                className={`card-item${isOwned(card.id) ? ' is-owned' : ''}`}
               >
                 <div className="card-image-wrapper">
                   <img
@@ -376,6 +408,11 @@ export default function SetPage() {
                     loading="lazy"
                   />
                   <div className="card-price-badge">${getMockPrice(card)}</div>
+                  {isOwned(card.id) && (
+                    <div className="card-owned-badge">
+                      {getCount(card.id) > 1 ? `x${getCount(card.id)}` : '✓'}
+                    </div>
+                  )}
                   {card.variantCount > 0 && (
                     <div className="variant-badge">
                       {card.variantCount} variants

@@ -5,7 +5,9 @@ import BackButton from '../components/BackButton'
 import ShareButton from '../components/ShareButton'
 import SEO from '../components/SEO'
 import { getMockPrice } from '../utils/pricing'
+import { useCollection } from '../context/CollectionContext'
 import '../styles/card.css'
+import '../styles/collection.css'
 
 export default function CardPage() {
   const { cardId } = useParams()
@@ -13,6 +15,7 @@ export default function CardPage() {
   const [card, setCard] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const { toggleCard, addCopy, removeCopy, isOwned, getCount } = useCollection()
 
   useEffect(() => {
     loadCard()
@@ -94,7 +97,35 @@ export default function CardPage() {
               <span className="market-value-label">Market Value</span>
               <span className="market-value-price">${getMockPrice(card)}</span>
             </div>
-            
+
+            <button
+              className={`collection-toggle-btn${isOwned(card.id) ? ' is-owned' : ''}`}
+              onClick={() => toggleCard(card)}
+            >
+              <span className="collection-toggle-icon">{isOwned(card.id) ? '✓' : '+'}</span>
+              {isOwned(card.id) ? 'In My Collection' : 'Add to Collection'}
+              {isOwned(card.id) && (
+                <span className="collection-btn-copies">{getCount(card.id)} cop{getCount(card.id) === 1 ? 'y' : 'ies'}</span>
+              )}
+            </button>
+
+            {isOwned(card.id) && (
+              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                <button
+                  className="collection-qty-btn"
+                  style={{ flex: 1, height: '36px' }}
+                  onClick={() => removeCopy(card.id)}
+                  title="Remove one copy"
+                >− Remove copy</button>
+                <button
+                  className="collection-qty-btn"
+                  style={{ flex: 1, height: '36px' }}
+                  onClick={() => addCopy(card)}
+                  title="Add another copy"
+                >+ Add copy</button>
+              </div>
+            )}
+
             <div className="card-meta-row">
               <span className="meta-badge">#{card.number}</span>
               {card.rarity && (
