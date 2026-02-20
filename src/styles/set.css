@@ -149,8 +149,7 @@
 
 .cards-controls {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  align-items: flex-end;
   gap: 1rem;
   margin: 2rem 0;
   flex-wrap: wrap;
@@ -175,7 +174,7 @@
 
 .cards-controls-right {
   display: flex;
-  align-items: flex-start;
+  align-items: flex-end;
   gap: 1.5rem;
   flex-wrap: wrap;
 }
