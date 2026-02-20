@@ -68,12 +68,11 @@ export default function CardPage() {
           { label: card.name }
         ]} />
 
-        <BackButton 
-          fallbackPath={`/expansions/${card.set?.id}`} 
-          label="Back to Set" 
-        />
-
         <div className="card-actions">
+          <BackButton 
+            fallbackPath={`/expansions/${card.set?.id}`} 
+            label="Back to Set" 
+          />
           <ShareButton 
             title={`${card.name} - ${card.set?.name || 'Pokemon TCG'}`}
             url={window.location.href}
