@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useCollection } from '../context/CollectionContext'
 import { getMockPrice } from '../utils/pricing'
@@ -19,7 +19,20 @@ export default function CollectionPage() {
   const [activeBinder, setActiveBinder] = useState(null)
   const [newBinderName, setNewBinderName] = useState('')
   const [importError, setImportError] = useState(null)
+  const [setInfoMap, setSetInfoMap] = useState({})
   const fileInputRef = useRef(null)
+
+  // ---- Fetch set metadata (logo, symbol, series) once ----
+  useEffect(() => {
+    fetch('/api/tcg?endpoint=sets')
+      .then(r => r.json())
+      .then(data => {
+        const map = {}
+        ;(data.data || []).forEach(s => { map[s.id] = s })
+        setSetInfoMap(map)
+      })
+      .catch(() => {})
+  }, [])
 
   // ---- Derived stats ----
   const ownedSets = useMemo(() => getOwnedSets(owned), [owned])
@@ -186,7 +199,7 @@ export default function CollectionPage() {
       {/* ---- Content ---- */}
       <div className="container collection-content">
 
-        {/* OVERVIEW — set progress bars */}
+        {/* OVERVIEW — set progress */}
         {tab === 'overview' && (
           <div className="collection-overview">
             {sortedOwnedSets.length === 0 ? (
@@ -198,34 +211,63 @@ export default function CollectionPage() {
                 {sortedOwnedSets.map(set => {
                   const pct = set.setTotal ? Math.round(set.owned / set.setTotal * 100) : null
                   const completed = set.setTotal && set.owned >= set.setTotal
+                  const meta = setInfoMap[set.setId]
+                  const symbolUrl = meta?.images?.symbol
+                  const series = meta?.series
+                  const abbr = (set.setName || set.setId).replace(/[aeiou\s]/gi, '').slice(0, 3).toUpperCase() || set.setId.slice(0, 3).toUpperCase()
+
                   return (
                     <Link
                       key={set.setId}
                       to={`/expansions/${set.setId}`}
                       className={`set-progress-item${completed ? ' completed' : ''}`}
                     >
-                      <div className="set-progress-header">
-                        <span className="set-progress-name">
-                          {set.setName}
-                          {completed && <span className="set-complete-badge">✓ Complete</span>}
-                        </span>
-                        <div className="set-progress-meta">
-                          <span className="set-progress-owned">
-                            {set.owned}{set.setTotal ? ` / ${set.setTotal}` : ''}
-                          </span>
-                          {pct !== null && (
-                            <span className="set-progress-pct">{pct}%</span>
-                          )}
+                      {/* Symbol / logo */}
+                      <div className="set-symbol-area">
+                        {symbolUrl
+                          ? <img
+                              src={symbolUrl}
+                              alt=""
+                              className="set-symbol-img"
+                              onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }}
+                            />
+                          : null
+                        }
+                        <div className="set-symbol-fallback" style={symbolUrl ? { display: 'none' } : undefined}>
+                          {abbr}
                         </div>
                       </div>
-                      {set.setTotal && (
+
+                      {/* Main body */}
+                      <div className="set-progress-body">
+                        <div className="set-progress-top">
+                          <div className="set-progress-names">
+                            <span className="set-progress-name">{set.setName || set.setId}</span>
+                            {series && <span className="set-progress-series">{series}</span>}
+                          </div>
+                          <div className="set-progress-right">
+                            {completed && <span className="set-complete-badge">✓ Complete</span>}
+                            {pct !== null
+                              ? <span className="set-progress-pct" style={completed ? { color: '#10b981' } : undefined}>{pct}%</span>
+                              : <span className="set-progress-pct set-progress-pct--muted">—</span>
+                            }
+                          </div>
+                        </div>
+
                         <div className="set-progress-bar-track">
                           <div
                             className="set-progress-bar-fill"
-                            style={{ width: `${Math.min(pct, 100)}%` }}
+                            style={{ width: set.setTotal ? `${Math.min(pct, 100)}%` : '0%' }}
                           />
                         </div>
-                      )}
+
+                        <div className="set-progress-count">
+                          <span>{set.owned}{set.setTotal ? ` / ${set.setTotal}` : ''} cards</span>
+                          {set.copies > set.owned && (
+                            <span className="set-progress-copies">· {set.copies} total copies</span>
+                          )}
+                        </div>
+                      </div>
                     </Link>
                   )
                 })}
