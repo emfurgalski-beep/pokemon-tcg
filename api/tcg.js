@@ -240,10 +240,20 @@ async function fetchCards(setId) {
   // Use GitHub CDN (stable, no variants)
   try {
     console.log(`[API] Using GitHub CDN for cards...`)
-    const cards = await fetchWithTimeout(getGithubCardsUrl(setId))
-    console.log(`[API] GitHub CDN success: ${cards.length} cards (no variants)`)
-    return { data: cards, source: 'github-cdn', hasVariants: false }
-    
+    const [cards, setsResult] = await Promise.all([
+      fetchWithTimeout(getGithubCardsUrl(setId)),
+      fetchSets(),
+    ])
+    const setInfo = setsResult.data.find(s => s.id === setId)
+    const enriched = setInfo
+      ? cards.map(card => ({
+          ...card,
+          set: { id: setInfo.id, name: setInfo.name, series: setInfo.series, total: setInfo.total },
+        }))
+      : cards
+    console.log(`[API] GitHub CDN success: ${enriched.length} cards (no variants)`)
+    return { data: enriched, source: 'github-cdn', hasVariants: false }
+
   } catch (error) {
     console.error('[API] GitHub CDN failed')
     throw new Error('Card data unavailable')

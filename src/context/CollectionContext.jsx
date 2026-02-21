@@ -7,6 +7,27 @@ const WISHLIST_KEY = 'pokemon-wishlist'
 
 const CollectionContext = createContext(null)
 
+// One-time migration: cards saved before set-info injection had no setId.
+// Extract setId from the card ID pattern: "sv3pt5-1" → "sv3pt5"
+function migrateOwned(owned) {
+  const needsMigration = Object.values(owned).some(e => !e.setId)
+  if (!needsMigration) return owned
+  const migrated = {}
+  Object.entries(owned).forEach(([id, entry]) => {
+    if (entry.setId) {
+      migrated[id] = entry
+    } else {
+      const lastDash = id.lastIndexOf('-')
+      const extractedSetId = lastDash > 0 ? id.substring(0, lastDash) : null
+      migrated[id] = extractedSetId
+        ? { ...entry, setId: extractedSetId, setName: entry.setName || extractedSetId }
+        : entry
+    }
+  })
+  localStorage.setItem(COLLECTION_KEY, JSON.stringify(migrated))
+  return migrated
+}
+
 function toEntry(card) {
   return {
     count: 1,
@@ -21,7 +42,7 @@ function toEntry(card) {
 }
 
 export function CollectionProvider({ children }) {
-  const [owned, setOwned] = useState(getOwned)
+  const [owned, setOwned] = useState(() => migrateOwned(getOwned()))
   const [binders, setBinders] = useState(getBinders)
   const [wishlist, setWishlist] = useState(getWishlist)
 

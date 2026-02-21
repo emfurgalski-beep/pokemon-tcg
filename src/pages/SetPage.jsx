@@ -163,17 +163,30 @@ export default function SetPage() {
     return Object.entries(breakdown).sort((a, b) => b[1] - a[1]).slice(0, 8)
   }, [cardsWithVariants])
 
+  // Guarantee the card always carries set info before writing to collection
+  function withSetInfo(card) {
+    if (card.set?.id) return card
+    return {
+      ...card,
+      set: {
+        id: setId,
+        name: setInfo?.name || setId,
+        total: setInfo?.total || 0,
+      },
+    }
+  }
+
   const handleCollect = useCallback((e, card) => {
     e.preventDefault()
     e.stopPropagation()
-    toggleCard(card)
-  }, [toggleCard])
+    toggleCard(withSetInfo(card))
+  }, [toggleCard, setId, setInfo])
 
   const handleAddCopy = useCallback((e, card) => {
     e.preventDefault()
     e.stopPropagation()
-    addCopy(card)
-  }, [addCopy])
+    addCopy(withSetInfo(card))
+  }, [addCopy, setId, setInfo])
 
   if (loading) return <div className="loading">Loading set...</div>
   if (error) return <div className="error">Error: {error}</div>
