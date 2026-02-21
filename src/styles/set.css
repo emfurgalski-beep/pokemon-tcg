@@ -270,6 +270,43 @@
   white-space: nowrap;
 }
 
+/* Set collection progress bar (shows when ≥1 card owned) */
+.set-collection-progress {
+  margin-top: 1rem;
+  max-width: 420px;
+}
+
+.set-collection-progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.4rem;
+  font-size: 0.875rem;
+}
+
+.set-collection-label {
+  color: var(--text-muted);
+}
+
+.set-collection-pct {
+  font-weight: 700;
+  color: #10b981;
+}
+
+.set-collection-bar-track {
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.set-collection-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
 /* Cards Grid */
 .cards-grid {
   display: grid;
@@ -292,6 +329,67 @@
   transform: translateY(-8px);
   border-color: var(--accent);
   box-shadow: 0 20px 40px rgba(59, 130, 246, 0.2);
+}
+
+/* Inner link — the navigating part of the card */
+.card-item-inner {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Collect / Owned button row at bottom of card */
+.card-collect-row {
+  display: flex;
+  border-top: 1px solid var(--border);
+}
+
+.card-collect-btn {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background: var(--bg);
+  color: var(--text-muted);
+  font-size: 0.775rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  letter-spacing: 0.3px;
+}
+
+.card-collect-btn:hover {
+  background: var(--accent);
+  color: white;
+}
+
+.card-collect-btn.owned {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+.card-collect-btn.owned:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+
+/* + copy button (only visible when owned) */
+.card-add-copy-btn {
+  width: 32px;
+  flex-shrink: 0;
+  border: none;
+  border-left: 1px solid rgba(255,255,255,0.2);
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  color: white;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.card-add-copy-btn:hover {
+  background: linear-gradient(135deg, #047857 0%, #065f46 100%);
 }
 
 .card-image-wrapper {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
+import { useCollection } from '../context/CollectionContext'
 import '../styles/expansions.css'
 
 export default function ExpansionsPage() {
@@ -9,6 +10,17 @@ export default function ExpansionsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedSeries, setSelectedSeries] = useState('all')
   const [sortBy, setSortBy] = useState('date-desc')
+
+  const { owned } = useCollection()
+
+  // Build a map of setId → unique owned card count for mini progress bars
+  const ownedBySet = useMemo(() => {
+    const map = {}
+    Object.values(owned).forEach(e => {
+      if (e.setId) map[e.setId] = (map[e.setId] || 0) + 1
+    })
+    return map
+  }, [owned])
 
   useEffect(() => {
     loadSets()
@@ -234,6 +246,19 @@ export default function ExpansionsPage() {
                         <span className="meta-item">{set.releaseDate}</span>
                       )}
                     </div>
+                    {ownedBySet[set.id] > 0 && set.total > 0 && (
+                      <div className="set-mini-progress">
+                        <div className="set-mini-progress-bar">
+                          <div
+                            className="set-mini-progress-fill"
+                            style={{ width: `${Math.min(ownedBySet[set.id] / set.total * 100, 100)}%` }}
+                          />
+                        </div>
+                        <span className="set-mini-progress-label">
+                          {ownedBySet[set.id]}/{set.total}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </Link>
               ))}

@@ -1,92 +1,204 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useCallback } from 'react'
+import { getOwned, getBinders, getWishlist } from '../utils/collection'
+
+const COLLECTION_KEY = 'pokemon-collection'
+const BINDERS_KEY = 'pokemon-binders'
+const WISHLIST_KEY = 'pokemon-wishlist'
 
 const CollectionContext = createContext(null)
 
+function toEntry(card) {
+  return {
+    count: 1,
+    name: card.name,
+    image: card.images?.small || card.images?.large,
+    setId: card.set?.id,
+    setName: card.set?.name,
+    setTotal: card.set?.total,
+    rarity: card.rarity,
+    number: card.number,
+  }
+}
+
 export function CollectionProvider({ children }) {
-  const [collection, setCollection] = useState(() => {
-    try {
-      const saved = localStorage.getItem('pokemon-collection')
-      return saved ? JSON.parse(saved) : {}
-    } catch {
-      return {}
-    }
-  })
+  const [owned, setOwned] = useState(getOwned)
+  const [binders, setBinders] = useState(getBinders)
+  const [wishlist, setWishlist] = useState(getWishlist)
 
-  useEffect(() => {
-    localStorage.setItem('pokemon-collection', JSON.stringify(collection))
-  }, [collection])
+  // ---- Collection ----
 
-  // card = { id, name, images, set, rarity, number }
   const toggleCard = useCallback((card) => {
-    setCollection(prev => {
-      if (prev[card.id]) {
-        const { [card.id]: _, ...rest } = prev
-        return rest
-      }
-      return {
-        ...prev,
-        [card.id]: {
-          count: 1,
-          name: card.name,
-          image: card.images?.small || card.images?.large,
-          setId: card.set?.id,
-          setName: card.set?.name,
-          rarity: card.rarity,
-          number: card.number,
-        },
-      }
+    setOwned(prev => {
+      const next = prev[card.id]
+        ? (({ [card.id]: _, ...r }) => r)(prev)
+        : { ...prev, [card.id]: toEntry(card) }
+      localStorage.setItem(COLLECTION_KEY, JSON.stringify(next))
+      return next
     })
   }, [])
 
   const addCopy = useCallback((card) => {
-    setCollection(prev => {
-      if (prev[card.id]) {
-        return { ...prev, [card.id]: { ...prev[card.id], count: prev[card.id].count + 1 } }
-      }
-      return {
-        ...prev,
-        [card.id]: {
-          count: 1,
-          name: card.name,
-          image: card.images?.small || card.images?.large,
-          setId: card.set?.id,
-          setName: card.set?.name,
-          rarity: card.rarity,
-          number: card.number,
-        },
-      }
+    setOwned(prev => {
+      const existing = prev[card.id]
+      const next = existing
+        ? { ...prev, [card.id]: { ...existing, count: existing.count + 1 } }
+        : { ...prev, [card.id]: toEntry(card) }
+      localStorage.setItem(COLLECTION_KEY, JSON.stringify(next))
+      return next
     })
   }, [])
 
   const removeCopy = useCallback((cardId) => {
-    setCollection(prev => {
-      const entry = prev[cardId]
-      if (!entry) return prev
-      if (entry.count <= 1) {
-        const { [cardId]: _, ...rest } = prev
-        return rest
-      }
-      return { ...prev, [cardId]: { ...entry, count: entry.count - 1 } }
+    setOwned(prev => {
+      const existing = prev[cardId]
+      if (!existing) return prev
+      const next = existing.count <= 1
+        ? (({ [cardId]: _, ...r }) => r)(prev)
+        : { ...prev, [cardId]: { ...existing, count: existing.count - 1 } }
+      localStorage.setItem(COLLECTION_KEY, JSON.stringify(next))
+      return next
     })
   }, [])
 
-  const isOwned = useCallback((cardId) => Boolean(collection[cardId]), [collection])
-  const getCount = useCallback((cardId) => collection[cardId]?.count || 0, [collection])
+  const isOwned = useCallback((cardId) => Boolean(owned[cardId]), [owned])
+  const getCount = useCallback((cardId) => owned[cardId]?.count || 0, [owned])
+  const uniqueCards = Object.keys(owned).length
+  const totalCopies = Object.values(owned).reduce((s, e) => s + (e.count || 1), 0)
 
-  const uniqueCards = Object.keys(collection).length
-  const totalCopies = Object.values(collection).reduce((sum, e) => sum + e.count, 0)
+  // ---- Binders ----
+
+  const createBinder = useCallback((name) => {
+    const id = `binder-${Date.now()}`
+    setBinders(prev => {
+      const next = { ...prev, [id]: { id, name, createdAt: Date.now(), cards: {} } }
+      localStorage.setItem(BINDERS_KEY, JSON.stringify(next))
+      return next
+    })
+    return id
+  }, [])
+
+  const deleteBinder = useCallback((binderId) => {
+    setBinders(prev => {
+      const { [binderId]: _, ...next } = prev
+      localStorage.setItem(BINDERS_KEY, JSON.stringify(next))
+      return next
+    })
+  }, [])
+
+  const renameBinder = useCallback((binderId, newName) => {
+    setBinders(prev => {
+      if (!prev[binderId]) return prev
+      const next = { ...prev, [binderId]: { ...prev[binderId], name: newName } }
+      localStorage.setItem(BINDERS_KEY, JSON.stringify(next))
+      return next
+    })
+  }, [])
+
+  const addCardToBinder = useCallback((binderId, card) => {
+    setBinders(prev => {
+      if (!prev[binderId]) return prev
+      const binder = prev[binderId]
+      const next = {
+        ...prev,
+        [binderId]: {
+          ...binder,
+          cards: {
+            ...binder.cards,
+            [card.id]: {
+              name: card.name,
+              image: card.images?.small || card.images?.large || card.image,
+              setId: card.set?.id || card.setId,
+              setName: card.set?.name || card.setName,
+              rarity: card.rarity,
+              number: card.number,
+            },
+          },
+        },
+      }
+      localStorage.setItem(BINDERS_KEY, JSON.stringify(next))
+      return next
+    })
+  }, [])
+
+  const removeCardFromBinder = useCallback((binderId, cardId) => {
+    setBinders(prev => {
+      if (!prev[binderId]) return prev
+      const { [cardId]: _, ...cards } = prev[binderId].cards
+      const next = { ...prev, [binderId]: { ...prev[binderId], cards } }
+      localStorage.setItem(BINDERS_KEY, JSON.stringify(next))
+      return next
+    })
+  }, [])
+
+  const isInBinder = useCallback(
+    (binderId, cardId) => Boolean(binders[binderId]?.cards[cardId]),
+    [binders]
+  )
+
+  // ---- Wishlist ----
+
+  const toggleWishlist = useCallback((card) => {
+    setWishlist(prev => {
+      const next = prev[card.id]
+        ? (({ [card.id]: _, ...r }) => r)(prev)
+        : {
+            ...prev,
+            [card.id]: {
+              name: card.name,
+              image: card.images?.small || card.images?.large,
+              setId: card.set?.id,
+              setName: card.set?.name,
+              rarity: card.rarity,
+              number: card.number,
+            },
+          }
+      localStorage.setItem(WISHLIST_KEY, JSON.stringify(next))
+      return next
+    })
+  }, [])
+
+  const isWishlisted = useCallback((cardId) => Boolean(wishlist[cardId]), [wishlist])
+
+  // ---- Export / Import ----
+
+  const exportFull = useCallback(() => {
+    const json = JSON.stringify(
+      { version: 1, exportedAt: new Date().toISOString(), collection: owned, binders },
+      null, 2
+    )
+    const blob = new Blob([json], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `pokemon-collection-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }, [owned, binders])
+
+  const importFull = useCallback((jsonString) => {
+    const data = JSON.parse(jsonString)
+    if (data.collection) {
+      localStorage.setItem(COLLECTION_KEY, JSON.stringify(data.collection))
+      setOwned(data.collection)
+    }
+    if (data.binders) {
+      localStorage.setItem(BINDERS_KEY, JSON.stringify(data.binders))
+      setBinders(data.binders)
+    }
+  }, [])
 
   return (
-    <CollectionContext.Provider value={{
-      collection,
-      toggleCard,
-      addCopy,
-      removeCopy,
-      isOwned,
-      getCount,
-      uniqueCards,
-      totalCopies,
-    }}>
+    <CollectionContext.Provider
+      value={{
+        owned, binders, wishlist,
+        toggleCard, addCopy, removeCopy,
+        isOwned, getCount, uniqueCards, totalCopies,
+        createBinder, deleteBinder, renameBinder,
+        addCardToBinder, removeCardFromBinder, isInBinder,
+        toggleWishlist, isWishlisted,
+        exportFull, importFull,
+      }}
+    >
       {children}
     </CollectionContext.Provider>
   )

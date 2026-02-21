@@ -15,23 +15,34 @@ export default function CardPage() {
   const [card, setCard] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const { toggleCard, addCopy, removeCopy, isOwned, getCount } = useCollection()
+  const [binderOpen, setBinderOpen] = useState(false)
+
+  const {
+    toggleCard, addCopy, removeCopy, isOwned, getCount,
+    toggleWishlist, isWishlisted,
+    binders, addCardToBinder, removeCardFromBinder, isInBinder,
+  } = useCollection()
 
   useEffect(() => {
     loadCard()
   }, [cardId])
 
+  // Close binder dropdown when clicking outside
+  useEffect(() => {
+    if (!binderOpen) return
+    function handler(e) {
+      if (!e.target.closest('.binder-dropdown-wrapper')) setBinderOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [binderOpen])
+
   async function loadCard() {
     try {
       setLoading(true)
-      
       const response = await fetch(`/api/tcg?endpoint=card&id=${cardId}`)
       const data = await response.json()
-      
-      if (!response.ok) {
-        throw new Error(data.error || `HTTP ${response.status}`)
-      }
-      
+      if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`)
       setCard(data.data)
     } catch (err) {
       setError(err.message)
@@ -40,40 +51,34 @@ export default function CardPage() {
     }
   }
 
-  if (loading) {
-    return <div className="loading">Loading card...</div>
-  }
+  if (loading) return <div className="loading">Loading card...</div>
+  if (error) return <div className="error">Error: {error}</div>
+  if (!card) return <div className="error">Card not found</div>
 
-  if (error) {
-    return <div className="error">Error: {error}</div>
-  }
-
-  if (!card) {
-    return <div className="error">Card not found</div>
-  }
+  const owned = isOwned(card.id)
+  const count = getCount(card.id)
+  const wishlisted = isWishlisted(card.id)
+  const binderEntries = Object.values(binders)
 
   return (
     <div className="card-page">
-      <SEO 
+      <SEO
         title={`${card.name} - ${card.set?.name || 'Pokemon TCG'}`}
         description={`${card.name} from ${card.set?.name || 'Pokemon TCG'}. ${card.hp ? `HP: ${card.hp}` : ''} ${card.types ? card.types.join(', ') + ' type' : ''}`}
         image={card.images?.large || card.images?.small}
         type="article"
       />
-      
+
       <div className="container">
         <Breadcrumbs items={[
           { label: 'Expansions', to: '/expansions' },
           { label: card.set?.name || 'Set', to: `/expansions/${card.set?.id}` },
-          { label: card.name }
+          { label: card.name },
         ]} />
 
         <div className="card-actions">
-          <BackButton 
-            fallbackPath={`/expansions/${card.set?.id}`} 
-            label="Back to Set" 
-          />
-          <ShareButton 
+          <BackButton fallbackPath={`/expansions/${card.set?.id}`} label="Back to Set" />
+          <ShareButton
             title={`${card.name} - ${card.set?.name || 'Pokemon TCG'}`}
             url={window.location.origin + location.pathname}
           />
@@ -92,48 +97,92 @@ export default function CardPage() {
           {/* Right: Card Details */}
           <div className="card-details-section">
             <h1 className="card-title">{card.name}</h1>
-            
+
             <div className="market-value">
               <span className="market-value-label">Market Value</span>
               <span className="market-value-price">${getMockPrice(card)}</span>
             </div>
 
+            {/* ---- Collection toggle ---- */}
             <button
-              className={`collection-toggle-btn${isOwned(card.id) ? ' is-owned' : ''}`}
+              className={`collection-toggle-btn${owned ? ' is-owned' : ''}`}
               onClick={() => toggleCard(card)}
             >
-              <span className="collection-toggle-icon">{isOwned(card.id) ? '✓' : '+'}</span>
-              {isOwned(card.id) ? 'In My Collection' : 'Add to Collection'}
-              {isOwned(card.id) && (
-                <span className="collection-btn-copies">{getCount(card.id)} cop{getCount(card.id) === 1 ? 'y' : 'ies'}</span>
+              <span className="collection-toggle-icon">{owned ? '✓' : '+'}</span>
+              {owned ? 'In My Collection' : 'Add to Collection'}
+              {owned && (
+                <span className="collection-btn-copies">
+                  {count} cop{count === 1 ? 'y' : 'ies'}
+                </span>
               )}
             </button>
 
-            {isOwned(card.id) && (
-              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+            {owned && (
+              <div className="card-copy-row">
                 <button
                   className="collection-qty-btn"
-                  style={{ flex: 1, height: '36px' }}
                   onClick={() => removeCopy(card.id)}
                   title="Remove one copy"
                 >− Remove copy</button>
+                <span className="collection-qty">{count}</span>
                 <button
                   className="collection-qty-btn"
-                  style={{ flex: 1, height: '36px' }}
                   onClick={() => addCopy(card)}
                   title="Add another copy"
                 >+ Add copy</button>
               </div>
             )}
 
+            {/* ---- Wishlist + Binder row ---- */}
+            <div className="card-secondary-actions">
+              <button
+                className={`wishlist-btn${wishlisted ? ' wishlisted' : ''}`}
+                onClick={() => toggleWishlist(card)}
+                title={wishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
+              >
+                {wishlisted ? '★ On Wishlist' : '☆ Add to Wishlist'}
+              </button>
+
+              {binderEntries.length > 0 && (
+                <div className="binder-dropdown-wrapper">
+                  <button
+                    className="binder-btn"
+                    onClick={() => setBinderOpen(v => !v)}
+                  >
+                    🗂 Binders
+                  </button>
+                  {binderOpen && (
+                    <div className="binder-dropdown">
+                      <div className="binder-dropdown-title">Add / Remove from Binder</div>
+                      {binderEntries.map(binder => {
+                        const inBinder = isInBinder(binder.id, card.id)
+                        return (
+                          <button
+                            key={binder.id}
+                            className={`binder-dropdown-item${inBinder ? ' in-binder' : ''}`}
+                            onClick={() => {
+                              inBinder
+                                ? removeCardFromBinder(binder.id, card.id)
+                                : addCardToBinder(binder.id, card)
+                            }}
+                          >
+                            {inBinder ? '✓ ' : '+ '}{binder.name}
+                            <span className="binder-count">
+                              {Object.keys(binder.cards).length}
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             <div className="card-meta-row">
               <span className="meta-badge">#{card.number}</span>
-              {card.rarity && (
-                <span className="meta-badge rarity">{card.rarity}</span>
-              )}
-              {card.supertype && (
-                <span className="meta-badge">{card.supertype}</span>
-              )}
+              {card.rarity && <span className="meta-badge rarity">{card.rarity}</span>}
+              {card.supertype && <span className="meta-badge">{card.supertype}</span>}
             </div>
 
             {/* Pokemon-specific details */}
@@ -146,13 +195,13 @@ export default function CardPage() {
                       <div className="info-value">{card.hp}</div>
                     </div>
                   )}
-                  {card.types && card.types.length > 0 && (
+                  {card.types?.length > 0 && (
                     <div className="info-item">
                       <div className="info-label">Type</div>
                       <div className="info-value">{card.types.join(', ')}</div>
                     </div>
                   )}
-                  {card.subtypes && card.subtypes.length > 0 && (
+                  {card.subtypes?.length > 0 && (
                     <div className="info-item">
                       <div className="info-label">Subtype</div>
                       <div className="info-value">{card.subtypes.join(', ')}</div>
@@ -166,8 +215,7 @@ export default function CardPage() {
                   )}
                 </div>
 
-                {/* Attacks */}
-                {card.attacks && card.attacks.length > 0 && (
+                {card.attacks?.length > 0 && (
                   <div className="card-section">
                     <h2 className="section-title">Attacks</h2>
                     <div className="attacks-list">
@@ -180,21 +228,16 @@ export default function CardPage() {
                               ))}
                             </div>
                             <div className="attack-name">{attack.name}</div>
-                            {attack.damage && (
-                              <div className="attack-damage">{attack.damage}</div>
-                            )}
+                            {attack.damage && <div className="attack-damage">{attack.damage}</div>}
                           </div>
-                          {attack.text && (
-                            <div className="attack-text">{attack.text}</div>
-                          )}
+                          {attack.text && <div className="attack-text">{attack.text}</div>}
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {/* Abilities */}
-                {card.abilities && card.abilities.length > 0 && (
+                {card.abilities?.length > 0 && (
                   <div className="card-section">
                     <h2 className="section-title">Abilities</h2>
                     <div className="abilities-list">
@@ -210,9 +253,8 @@ export default function CardPage() {
                   </div>
                 )}
 
-                {/* Weaknesses & Resistances */}
                 <div className="card-info-grid">
-                  {card.weaknesses && card.weaknesses.length > 0 && (
+                  {card.weaknesses?.length > 0 && (
                     <div className="info-item">
                       <div className="info-label">Weakness</div>
                       <div className="info-value">
@@ -220,7 +262,7 @@ export default function CardPage() {
                       </div>
                     </div>
                   )}
-                  {card.resistances && card.resistances.length > 0 && (
+                  {card.resistances?.length > 0 && (
                     <div className="info-item">
                       <div className="info-label">Resistance</div>
                       <div className="info-value">
@@ -228,7 +270,7 @@ export default function CardPage() {
                       </div>
                     </div>
                   )}
-                  {card.retreatCost && card.retreatCost.length > 0 && (
+                  {card.retreatCost?.length > 0 && (
                     <div className="info-item">
                       <div className="info-label">Retreat Cost</div>
                       <div className="info-value">{card.retreatCost.length}</div>
@@ -238,7 +280,6 @@ export default function CardPage() {
               </>
             )}
 
-            {/* Trainer/Energy card text */}
             {(card.supertype === 'Trainer' || card.supertype === 'Energy') && card.rules && (
               <div className="card-section">
                 <h2 className="section-title">Rules</h2>
@@ -250,14 +291,12 @@ export default function CardPage() {
               </div>
             )}
 
-            {/* Flavor Text */}
             {card.flavorText && (
               <div className="card-section">
                 <div className="flavor-text">"{card.flavorText}"</div>
               </div>
             )}
 
-            {/* Set Info */}
             <div className="card-section">
               <h2 className="section-title">Set Information</h2>
               <div className="set-info">
@@ -280,7 +319,6 @@ export default function CardPage() {
               </div>
             </div>
 
-            {/* Artist */}
             {card.artist && (
               <div className="artist-credit">Illustrated by {card.artist}</div>
             )}
@@ -290,4 +328,3 @@ export default function CardPage() {
     </div>
   )
 }
-

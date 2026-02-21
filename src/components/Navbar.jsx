@@ -22,7 +22,7 @@ export default function Navbar() {
           <div className="navbar-links">
             <Link to="/expansions" className="navbar-link">Expansions</Link>
             <Link to="/collection" className="navbar-link">
-              Collection
+              My Collection
               {uniqueCards > 0 && (
                 <span className="collection-badge">{uniqueCards}</span>
               )}
