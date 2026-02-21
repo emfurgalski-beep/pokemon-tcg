@@ -185,118 +185,6 @@ export default function CardPage() {
               {card.supertype && <span className="meta-badge">{card.supertype}</span>}
             </div>
 
-            {/* Pokemon-specific details */}
-            {card.supertype === 'Pokémon' && (
-              <>
-                <div className="card-info-grid">
-                  {card.hp && (
-                    <div className="info-item">
-                      <div className="info-label">HP</div>
-                      <div className="info-value">{card.hp}</div>
-                    </div>
-                  )}
-                  {card.types?.length > 0 && (
-                    <div className="info-item">
-                      <div className="info-label">Type</div>
-                      <div className="info-value">{card.types.join(', ')}</div>
-                    </div>
-                  )}
-                  {card.subtypes?.length > 0 && (
-                    <div className="info-item">
-                      <div className="info-label">Subtype</div>
-                      <div className="info-value">{card.subtypes.join(', ')}</div>
-                    </div>
-                  )}
-                  {card.evolvesFrom && (
-                    <div className="info-item">
-                      <div className="info-label">Evolves From</div>
-                      <div className="info-value">{card.evolvesFrom}</div>
-                    </div>
-                  )}
-                </div>
-
-                {card.attacks?.length > 0 && (
-                  <div className="card-section">
-                    <h2 className="section-title">Attacks</h2>
-                    <div className="attacks-list">
-                      {card.attacks.map((attack, idx) => (
-                        <div key={idx} className="attack-item">
-                          <div className="attack-header">
-                            <div className="attack-cost">
-                              {attack.cost?.map((energy, i) => (
-                                <span key={i} className="energy-icon">{energy}</span>
-                              ))}
-                            </div>
-                            <div className="attack-name">{attack.name}</div>
-                            {attack.damage && <div className="attack-damage">{attack.damage}</div>}
-                          </div>
-                          {attack.text && <div className="attack-text">{attack.text}</div>}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {card.abilities?.length > 0 && (
-                  <div className="card-section">
-                    <h2 className="section-title">Abilities</h2>
-                    <div className="abilities-list">
-                      {card.abilities.map((ability, idx) => (
-                        <div key={idx} className="ability-item">
-                          <div className="ability-name">
-                            {ability.name} <span className="ability-type">({ability.type})</span>
-                          </div>
-                          <div className="ability-text">{ability.text}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="card-info-grid">
-                  {card.weaknesses?.length > 0 && (
-                    <div className="info-item">
-                      <div className="info-label">Weakness</div>
-                      <div className="info-value">
-                        {card.weaknesses.map(w => `${w.type} ${w.value}`).join(', ')}
-                      </div>
-                    </div>
-                  )}
-                  {card.resistances?.length > 0 && (
-                    <div className="info-item">
-                      <div className="info-label">Resistance</div>
-                      <div className="info-value">
-                        {card.resistances.map(r => `${r.type} ${r.value}`).join(', ')}
-                      </div>
-                    </div>
-                  )}
-                  {card.retreatCost?.length > 0 && (
-                    <div className="info-item">
-                      <div className="info-label">Retreat Cost</div>
-                      <div className="info-value">{card.retreatCost.length}</div>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-
-            {(card.supertype === 'Trainer' || card.supertype === 'Energy') && card.rules && (
-              <div className="card-section">
-                <h2 className="section-title">Rules</h2>
-                <div className="rules-list">
-                  {card.rules.map((rule, idx) => (
-                    <div key={idx} className="rule-item">{rule}</div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {card.flavorText && (
-              <div className="card-section">
-                <div className="flavor-text">"{card.flavorText}"</div>
-              </div>
-            )}
-
             <div className="card-section">
               <h2 className="section-title">Set Information</h2>
               <div className="set-info">
@@ -320,7 +208,13 @@ export default function CardPage() {
             </div>
 
             {card.artist && (
-              <div className="artist-credit">Illustrated by {card.artist}</div>
+              <div className="card-section">
+                <h2 className="section-title">Artist</h2>
+                <div className="artist-block">
+                  <span className="artist-icon">✦</span>
+                  <span className="artist-name">{card.artist}</span>
+                </div>
+              </div>
             )}
           </div>
         </div>
