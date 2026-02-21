@@ -397,7 +397,7 @@ async function buildSearchIndex() {
             setId: set.id,
             setName: set.name,
             image: card.images?.small || '',
-            // Store only essential data for search
+            artist: card.artist || '',
           }))
         } catch (error) {
           console.error(`[Search] Failed to load set ${set.id}:`, error.message)

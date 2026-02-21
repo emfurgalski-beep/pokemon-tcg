@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link, useLocation } from 'react-router-dom'
+import { useParams, Link, useLocation, useNavigate } from 'react-router-dom'
 import Breadcrumbs from '../components/Breadcrumbs'
 import BackButton from '../components/BackButton'
 import ShareButton from '../components/ShareButton'
@@ -210,10 +210,14 @@ export default function CardPage() {
             {card.artist && (
               <div className="card-section">
                 <h2 className="section-title">Artist</h2>
-                <div className="artist-block">
+                <Link
+                  to={`/artist/${encodeURIComponent(card.artist)}`}
+                  className="artist-block"
+                >
                   <span className="artist-icon">✦</span>
                   <span className="artist-name">{card.artist}</span>
-                </div>
+                  <span className="artist-arrow">→</span>
+                </Link>
               </div>
             )}
           </div>

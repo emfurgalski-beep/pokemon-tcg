@@ -5,6 +5,7 @@ import SetPage from './pages/SetPage'
 import CardPage from './pages/CardPage'
 import SearchResultsPage from './pages/SearchResultsPage'
 import CollectionPage from './pages/CollectionPage'
+import ArtistPage from './pages/ArtistPage'
 import { CollectionProvider } from './context/CollectionContext'
 
 export default function App() {
@@ -18,6 +19,7 @@ export default function App() {
         <Route path="/cards/:cardId" element={<CardPage />} />
         <Route path="/search" element={<SearchResultsPage />} />
         <Route path="/collection" element={<CollectionPage />} />
+        <Route path="/artist/:artistName" element={<ArtistPage />} />
         <Route path="*" element={<Navigate to="/expansions" replace />} />
       </Routes>
     </CollectionProvider>

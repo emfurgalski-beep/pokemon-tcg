@@ -297,6 +297,14 @@
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 10px;
+  text-decoration: none;
+  transition: border-color 0.15s, background 0.15s;
+  cursor: pointer;
+}
+
+.artist-block:hover {
+  border-color: var(--accent);
+  background: rgba(59, 130, 246, 0.06);
 }
 
 .artist-icon {
@@ -309,6 +317,18 @@
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--text);
+  flex: 1;
+}
+
+.artist-arrow {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  transition: transform 0.15s;
+}
+
+.artist-block:hover .artist-arrow {
+  transform: translateX(3px);
+  color: var(--accent);
 }
 
 /* Responsive */
