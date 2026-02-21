@@ -59,13 +59,14 @@ export default function SearchResultsPage() {
     
     const filtered = searchIndex.filter(card =>
       card.name.includes(searchQuery) ||
-      card.number.includes(searchQuery)
+      card.number.includes(searchQuery) ||
+      card.artist?.toLowerCase().includes(searchQuery)
     )
-    
+
     const duration = Date.now() - startTime
     console.log(`[Search] Found ${filtered.length} results in ${duration}ms`)
-    
-    setResults(filtered.slice(0, 100)) // Limit to 100 results
+
+    setResults(filtered.slice(0, 100))
     setLoading(false)
   }
 
@@ -129,8 +130,11 @@ export default function SearchResultsPage() {
                 <div className="result-card-info">
                   <h3 className="result-card-name">{card.name}</h3>
                   <p className="result-card-meta">
-                    {card.setName} • #{card.number}
+                    {card.setName} · #{card.number}
                   </p>
+                  {card.artist && (
+                    <p className="result-card-artist">✦ {card.artist}</p>
+                  )}
                 </div>
               </Link>
             ))}

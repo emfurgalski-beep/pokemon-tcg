@@ -2,97 +2,97 @@ import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import '../styles/global-search.css'
 
+// Module-level cache so index is fetched only once per session
+let _indexCache = null
+let _indexPromise = null
+
+function loadIndex() {
+  if (_indexCache) return Promise.resolve(_indexCache)
+  if (_indexPromise) return _indexPromise
+  _indexPromise = fetch('/api/tcg?endpoint=searchIndex')
+    .then(r => r.json())
+    .then(d => { _indexCache = d.data || []; return _indexCache })
+  return _indexPromise
+}
+
 export default function GlobalSearch() {
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState([])
+  const [cardResults, setCardResults] = useState([])
+  const [artistResults, setArtistResults] = useState([])
   const [loading, setLoading] = useState(false)
   const [showResults, setShowResults] = useState(false)
   const searchRef = useRef(null)
   const navigate = useNavigate()
 
-  // Handle Enter key
   function handleKeyDown(e) {
     if (e.key === 'Enter' && query.trim().length >= 2) {
       setShowResults(false)
       navigate(`/search?q=${encodeURIComponent(query.trim())}`)
     }
+    if (e.key === 'Escape') {
+      setShowResults(false)
+    }
   }
 
-  // Close dropdown when clicking outside
   useEffect(() => {
-    function handleClickOutside(event) {
-      if (searchRef.current && !searchRef.current.contains(event.target)) {
+    function handleClickOutside(e) {
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
         setShowResults(false)
       }
     }
-
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Search across all sets
   useEffect(() => {
-    if (!query.trim() || query.length < 2) {
-      setResults([])
+    if (query.trim().length < 2) {
+      setCardResults([])
+      setArtistResults([])
       setShowResults(false)
       return
     }
 
-    const searchTimeout = setTimeout(async () => {
+    const t = setTimeout(async () => {
+      setLoading(true)
       try {
-        setLoading(true)
-        
-        // Get all sets
-        const setsResponse = await fetch('/api/tcg?endpoint=sets')
-        const setsData = await setsResponse.json()
-        const sets = setsData.data || []
+        const index = await loadIndex()
+        const q = query.toLowerCase().trim()
 
-        // Search through each set's cards
-        const allResults = []
-        const searchQuery = query.toLowerCase()
-
-        // Limit to first 5 sets for performance (can search all if needed)
-        const setsToSearch = sets.slice(0, 10)
-
-        for (const set of setsToSearch) {
-          try {
-            const cardsResponse = await fetch(`/api/tcg?endpoint=cards&setId=${set.id}`)
-            const cardsData = await cardsResponse.json()
-            const cards = cardsData.data || []
-
-            // Filter cards matching query
-            const matchingCards = cards.filter(card =>
-              card.name?.toLowerCase().includes(searchQuery) ||
-              card.number?.toString().includes(searchQuery)
-            )
-
-            // Add to results with set info
-            matchingCards.forEach(card => {
-              allResults.push({
-                ...card,
-                setName: set.name,
-                setId: set.id
-              })
-            })
-
-            // Limit total results to 20
-            if (allResults.length >= 20) break
-          } catch (error) {
-            console.error(`Failed to search set ${set.id}:`, error)
+        // Artist matches — collect unique artists
+        const artistMap = {}
+        index.forEach(c => {
+          if (c.artist && c.artist.toLowerCase().includes(q)) {
+            artistMap[c.artist] = (artistMap[c.artist] || 0) + 1
           }
-        }
+        })
+        const artists = Object.entries(artistMap)
+          .map(([name, count]) => ({ name, count }))
+          .slice(0, 3)
 
-        setResults(allResults.slice(0, 20))
+        // Card matches — by name or number
+        const cards = index
+          .filter(c => c.name.includes(q) || c.number.includes(q))
+          .slice(0, 12)
+
+        setArtistResults(artists)
+        setCardResults(cards)
         setShowResults(true)
-      } catch (error) {
-        console.error('Search error:', error)
+      } catch (err) {
+        console.error('Search error:', err)
       } finally {
         setLoading(false)
       }
-    }, 300) // Debounce 300ms
+    }, 200)
 
-    return () => clearTimeout(searchTimeout)
+    return () => clearTimeout(t)
   }, [query])
+
+  function closeAndClear() {
+    setShowResults(false)
+    setQuery('')
+  }
+
+  const hasResults = artistResults.length > 0 || cardResults.length > 0
 
   return (
     <div className="global-search" ref={searchRef}>
@@ -102,9 +102,9 @@ export default function GlobalSearch() {
         </svg>
         <input
           type="search"
-          placeholder="Search cards..."
+          placeholder="Search cards or artists..."
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={e => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={() => query.length >= 2 && setShowResults(true)}
           className="global-search-input"
@@ -112,41 +112,58 @@ export default function GlobalSearch() {
         {loading && <div className="search-spinner" />}
       </div>
 
-      {showResults && results.length > 0 && (
+      {showResults && (hasResults || (!loading && query.length >= 2)) && (
         <div className="search-results-dropdown">
-          {results.map((card, idx) => (
-            <Link
-              key={`${card.id}-${idx}`}
-              to={`/cards/${card.id}`}
-              className="search-result-item"
-              onClick={() => {
-                setShowResults(false)
-                setQuery('')
-              }}
-            >
-              {card.images?.small && (
-                <img
-                  src={card.images.small}
-                  alt={card.name}
-                  className="search-result-image"
-                />
-              )}
-              <div className="search-result-info">
-                <div className="search-result-name">{card.name}</div>
-                <div className="search-result-meta">
-                  {card.setName} • #{card.number}
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
+          {/* Artist results */}
+          {artistResults.length > 0 && (
+            <>
+              <div className="search-section-label">Artists</div>
+              {artistResults.map(a => (
+                <Link
+                  key={a.name}
+                  to={`/artist/${encodeURIComponent(a.name)}`}
+                  className="search-artist-item"
+                  onClick={closeAndClear}
+                >
+                  <span className="search-artist-icon">✦</span>
+                  <div className="search-artist-info">
+                    <div className="search-artist-name">{a.name}</div>
+                    <div className="search-artist-count">{a.count} card{a.count !== 1 ? 's' : ''}</div>
+                  </div>
+                  <span className="search-artist-arrow">→</span>
+                </Link>
+              ))}
+            </>
+          )}
 
-      {showResults && query.length >= 2 && results.length === 0 && !loading && (
-        <div className="search-results-dropdown">
-          <div className="search-no-results">
-            No cards found for "{query}"
-          </div>
+          {/* Card results */}
+          {cardResults.length > 0 && (
+            <>
+              {artistResults.length > 0 && <div className="search-section-label">Cards</div>}
+              {cardResults.map((card, idx) => (
+                <Link
+                  key={`${card.id}-${idx}`}
+                  to={`/cards/${card.id}`}
+                  className="search-result-item"
+                  onClick={closeAndClear}
+                >
+                  {card.image && (
+                    <img src={card.image} alt={card.name} className="search-result-image" />
+                  )}
+                  <div className="search-result-info">
+                    <div className="search-result-name">{card.name}</div>
+                    <div className="search-result-meta">
+                      {card.setName} · #{card.number}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </>
+          )}
+
+          {!hasResults && !loading && (
+            <div className="search-no-results">No results for "{query}"</div>
+          )}
         </div>
       )}
     </div>

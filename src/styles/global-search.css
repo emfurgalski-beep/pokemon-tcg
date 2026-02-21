@@ -119,6 +119,70 @@
   color: var(--text-muted);
 }
 
+/* Section label (Artists / Cards) */
+.search-section-label {
+  padding: 0.4rem 1rem 0.25rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Artist result row */
+.search-artist-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid var(--border);
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.search-artist-item:last-child {
+  border-bottom: none;
+}
+
+.search-artist-item:hover {
+  background: var(--bg);
+}
+
+.search-artist-icon {
+  font-size: 1rem;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.search-artist-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.search-artist-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.search-artist-count {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 0.1rem;
+}
+
+.search-artist-arrow {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  transition: transform 0.15s, color 0.15s;
+}
+
+.search-artist-item:hover .search-artist-arrow {
+  transform: translateX(3px);
+  color: var(--accent);
+}
+
 /* Mobile */
 @media (max-width: 768px) {
   .global-search {
