@@ -198,38 +198,38 @@
   background: rgba(16, 185, 129, 0.04);
 }
 
-/* Symbol / icon */
-.set-symbol-area {
-  width: 52px;
+/* Set logo */
+.set-logo-area {
+  width: 130px;
   height: 52px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
 }
 
-.set-symbol-img {
-  width: 38px;
-  height: 38px;
+.set-logo-img {
+  max-width: 130px;
+  max-height: 52px;
+  width: auto;
+  height: auto;
   object-fit: contain;
-  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.4));
+  filter: drop-shadow(0 1px 4px rgba(0,0,0,0.5));
 }
 
-.set-symbol-fallback {
-  width: 100%;
-  height: 100%;
+.set-logo-fallback {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.75rem;
+  padding: 0.3rem 0.75rem;
+  background: rgba(59, 130, 246, 0.12);
+  border-radius: 8px;
+  font-size: 0.7rem;
   font-weight: 800;
   color: var(--accent);
-  letter-spacing: -0.5px;
-  background: rgba(59, 130, 246, 0.1);
+  text-align: center;
+  max-width: 130px;
+  line-height: 1.2;
 }
 
 /* Body */

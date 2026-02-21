@@ -209,12 +209,14 @@ export default function CollectionPage() {
             ) : (
               <div className="set-progress-list">
                 {sortedOwnedSets.map(set => {
-                  const pct = set.setTotal ? Math.round(set.owned / set.setTotal * 100) : null
-                  const completed = set.setTotal && set.owned >= set.setTotal
                   const meta = setInfoMap[set.setId]
-                  const symbolUrl = meta?.images?.symbol
+                  // Fallback to meta.total for cards migrated without setTotal
+                  const setTotal = set.setTotal || meta?.total || null
+                  const pct = setTotal ? Math.round(set.owned / setTotal * 100) : null
+                  const completed = setTotal && set.owned >= setTotal
+                  const logoUrl = meta?.images?.logo
                   const series = meta?.series
-                  const abbr = (set.setName || set.setId).replace(/[aeiou\s]/gi, '').slice(0, 3).toUpperCase() || set.setId.slice(0, 3).toUpperCase()
+                  const setName = set.setName && set.setName !== set.setId ? set.setName : (meta?.name || set.setId)
 
                   return (
                     <Link
@@ -222,19 +224,19 @@ export default function CollectionPage() {
                       to={`/expansions/${set.setId}`}
                       className={`set-progress-item${completed ? ' completed' : ''}`}
                     >
-                      {/* Symbol / logo */}
-                      <div className="set-symbol-area">
-                        {symbolUrl
+                      {/* Set logo */}
+                      <div className="set-logo-area">
+                        {logoUrl
                           ? <img
-                              src={symbolUrl}
+                              src={logoUrl}
                               alt=""
-                              className="set-symbol-img"
+                              className="set-logo-img"
                               onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }}
                             />
                           : null
                         }
-                        <div className="set-symbol-fallback" style={symbolUrl ? { display: 'none' } : undefined}>
-                          {abbr}
+                        <div className="set-logo-fallback" style={logoUrl ? { display: 'none' } : undefined}>
+                          {setName}
                         </div>
                       </div>
 
@@ -242,7 +244,7 @@ export default function CollectionPage() {
                       <div className="set-progress-body">
                         <div className="set-progress-top">
                           <div className="set-progress-names">
-                            <span className="set-progress-name">{set.setName || set.setId}</span>
+                            <span className="set-progress-name">{setName}</span>
                             {series && <span className="set-progress-series">{series}</span>}
                           </div>
                           <div className="set-progress-right">
@@ -257,12 +259,12 @@ export default function CollectionPage() {
                         <div className="set-progress-bar-track">
                           <div
                             className="set-progress-bar-fill"
-                            style={{ width: set.setTotal ? `${Math.min(pct, 100)}%` : '0%' }}
+                            style={{ width: setTotal ? `${Math.min(pct, 100)}%` : '0%' }}
                           />
                         </div>
 
                         <div className="set-progress-count">
-                          <span>{set.owned}{set.setTotal ? ` / ${set.setTotal}` : ''} cards</span>
+                          <span>{set.owned}{setTotal ? ` / ${setTotal}` : ''} cards</span>
                           {set.copies > set.owned && (
                             <span className="set-progress-copies">· {set.copies} total copies</span>
                           )}
