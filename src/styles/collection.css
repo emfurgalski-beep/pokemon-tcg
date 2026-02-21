@@ -175,15 +175,19 @@
 }
 
 .set-progress-item {
+  display: block;
+  text-decoration: none;
+  color: inherit;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 1rem 1.25rem;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .set-progress-item:hover {
   border-color: var(--accent);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.12);
 }
 
 .set-progress-item.completed {

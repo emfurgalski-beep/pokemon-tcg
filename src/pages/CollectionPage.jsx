@@ -9,7 +9,7 @@ export default function CollectionPage() {
   const {
     owned, binders, wishlist,
     uniqueCards, totalCopies,
-    addCopy, removeCopy, toggleWishlist,
+    toggleWishlist,
     createBinder, deleteBinder,
     addCardToBinder, removeCardFromBinder,
     exportFull, importFull,
@@ -39,11 +39,6 @@ export default function CollectionPage() {
   const estimatedValue = useMemo(() =>
     Object.entries(owned).reduce((sum, [id, card]) =>
       sum + getMockPrice({ id, rarity: card.rarity }) * (card.count || 1), 0),
-    [owned]
-  )
-
-  const tradeCards = useMemo(() =>
-    Object.entries(owned).filter(([, e]) => (e.count || 1) > 1),
     [owned]
   )
 
@@ -162,12 +157,6 @@ export default function CollectionPage() {
               <span className="collection-stat-value collection-stat-value--green">${estimatedValue.toFixed(2)}</span>
               <span className="collection-stat-label">Est. Value</span>
             </div>
-            {tradeCards.length > 0 && (
-              <div className="collection-stat">
-                <span className="collection-stat-value collection-stat-value--orange">{tradeCards.length}</span>
-                <span className="collection-stat-label">For Trade</span>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -180,7 +169,6 @@ export default function CollectionPage() {
               { key: 'overview', label: 'Overview' },
               { key: 'binders', label: 'Binders', count: Object.keys(binders).length },
               { key: 'wishlist', label: 'Wishlist', count: Object.keys(wishlist).length },
-              { key: 'trade', label: 'For Trade', count: tradeCards.length },
             ].map(({ key, label, count }) => (
               <button
                 key={key}
@@ -211,19 +199,22 @@ export default function CollectionPage() {
                   const pct = set.setTotal ? Math.round(set.owned / set.setTotal * 100) : null
                   const completed = set.setTotal && set.owned >= set.setTotal
                   return (
-                    <div key={set.setId} className={`set-progress-item${completed ? ' completed' : ''}`}>
+                    <Link
+                      key={set.setId}
+                      to={`/expansions/${set.setId}`}
+                      className={`set-progress-item${completed ? ' completed' : ''}`}
+                    >
                       <div className="set-progress-header">
-                        <Link to={`/expansions/${set.setId}`} className="set-progress-name">
+                        <span className="set-progress-name">
                           {set.setName}
                           {completed && <span className="set-complete-badge">✓ Complete</span>}
-                        </Link>
+                        </span>
                         <div className="set-progress-meta">
                           <span className="set-progress-owned">
                             {set.owned}{set.setTotal ? ` / ${set.setTotal}` : ''}
                           </span>
-                          {pct !== null && <span className="set-progress-pct">{pct}%</span>}
-                          {set.copies > set.owned && (
-                            <span className="set-extra-copies">+{set.copies - set.owned} extra</span>
+                          {pct !== null && (
+                            <span className="set-progress-pct">{pct}%</span>
                           )}
                         </div>
                       </div>
@@ -235,7 +226,7 @@ export default function CollectionPage() {
                           />
                         </div>
                       )}
-                    </div>
+                    </Link>
                   )
                 })}
               </div>
@@ -354,47 +345,6 @@ export default function CollectionPage() {
                 >✕ Remove</button>
               )
             )
-          )
-        )}
-
-        {/* FOR TRADE */}
-        {tab === 'trade' && (
-          tradeCards.length === 0 ? (
-            <div className="no-cards">
-              No cards for trade. Cards with more than 1 copy will appear here automatically.
-            </div>
-          ) : (
-            <>
-              <div className="trade-info">
-                Cards with extra copies — ready to trade or sell. Your duplicates are listed below.
-              </div>
-              {renderCardGrid(
-                tradeCards,
-                (cardId, card) => (
-                  <>
-                    <span className="trade-for-trade">{(card.count || 1) - 1} for trade</span>
-                    <button
-                      className="collection-qty-btn"
-                      onClick={() => removeCopy(cardId)}
-                      title="Remove one copy"
-                    >−</button>
-                    <span className="collection-qty">{card.count || 1}</span>
-                    <button
-                      className="collection-qty-btn"
-                      onClick={() => addCopy({
-                        id: cardId,
-                        name: card.name,
-                        images: { small: card.image },
-                        set: { id: card.setId, name: card.setName, total: card.setTotal },
-                        rarity: card.rarity,
-                        number: card.number,
-                      })}
-                      title="Add one copy"
-                    >+</button>
-                  </>
-                )
-              )}
-            </>
           )
         )}
 

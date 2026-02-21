@@ -247,16 +247,21 @@ export default function ExpansionsPage() {
                       )}
                     </div>
                     {ownedBySet[set.id] > 0 && set.total > 0 && (
-                      <div className="set-mini-progress">
-                        <div className="set-mini-progress-bar">
+                      <div className="set-owned-progress">
+                        <div className="set-owned-progress-row">
+                          <span className="set-owned-progress-count">
+                            {ownedBySet[set.id]} / {set.total} cards
+                          </span>
+                          <span className="set-owned-progress-pct">
+                            {Math.round(ownedBySet[set.id] / set.total * 100)}%
+                          </span>
+                        </div>
+                        <div className="set-owned-progress-track">
                           <div
-                            className="set-mini-progress-fill"
+                            className="set-owned-progress-fill"
                             style={{ width: `${Math.min(ownedBySet[set.id] / set.total * 100, 100)}%` }}
                           />
                         </div>
-                        <span className="set-mini-progress-label">
-                          {ownedBySet[set.id]}/{set.total}
-                        </span>
                       </div>
                     )}
                   </div>

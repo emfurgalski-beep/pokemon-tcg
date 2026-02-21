@@ -21,6 +21,7 @@ export default function SetPage() {
   const [hasVariants, setHasVariants] = useState(false)
   const [viewMode, setViewMode] = useState('cards') // 'cards' | 'products'
   const [ownedFilter, setOwnedFilter] = useState('all') // 'all' | 'owned' | 'missing'
+  const [cardLayout, setCardLayout] = useState('grid') // 'grid' | 'list'
 
   const { owned, isOwned, getCount, toggleCard, addCopy } = useCollection()
 
@@ -331,6 +332,29 @@ export default function SetPage() {
                   <span>Show Variants</span>
                 </label>
               )}
+              <div className="card-layout-toggle">
+                <button
+                  className={`layout-btn${cardLayout === 'grid' ? ' active' : ''}`}
+                  onClick={() => setCardLayout('grid')}
+                  title="Grid view"
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/>
+                    <rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/>
+                  </svg>
+                </button>
+                <button
+                  className={`layout-btn${cardLayout === 'list' ? ' active' : ''}`}
+                  onClick={() => setCardLayout('list')}
+                  title="List view"
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <rect x="1" y="2" width="14" height="2.5" rx="1"/>
+                    <rect x="1" y="6.75" width="14" height="2.5" rx="1"/>
+                    <rect x="1" y="11.5" width="14" height="2.5" rx="1"/>
+                  </svg>
+                </button>
+              </div>
               <div className="cards-count">
                 {sortedCards.length} / {cardsWithVariants.length} cards
                 {!showVariants && hasVariants && cards.length !== cardsWithVariants.length && (
@@ -351,7 +375,7 @@ export default function SetPage() {
         {viewMode === 'cards' ? (
           sortedCards.length === 0 ? (
             <div className="no-cards">No cards found</div>
-          ) : (
+          ) : cardLayout === 'grid' ? (
             <div className="cards-grid">
               {sortedCards.map(card => {
                 const owned = isOwned(card.id)
@@ -382,16 +406,12 @@ export default function SetPage() {
                         </div>
                       </div>
                     </Link>
-
-                    {/* Collect / Owned button — does NOT navigate */}
                     <div className="card-collect-row">
                       <button
                         className={`card-collect-btn${owned ? ' owned' : ''}`}
                         onClick={(e) => handleCollect(e, card)}
                       >
-                        {owned
-                          ? `✓ Owned${count > 1 ? ` ×${count}` : ''}`
-                          : '+ Collect'}
+                        {owned ? `✓ Owned${count > 1 ? ` ×${count}` : ''}` : '+ Collect'}
                       </button>
                       {owned && (
                         <button
@@ -401,6 +421,50 @@ export default function SetPage() {
                         >+</button>
                       )}
                     </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            /* LIST VIEW */
+            <div className="cards-list">
+              {sortedCards.map(card => {
+                const owned = isOwned(card.id)
+                const count = getCount(card.id)
+                return (
+                  <div key={card.id} className={`card-list-item${owned ? ' is-owned' : ''}`}>
+                    <Link to={`/cards/${card.id}`} className="card-list-inner">
+                      <img
+                        src={card.images?.small || card.images?.large}
+                        alt={card.name}
+                        className="card-list-thumb"
+                        loading="lazy"
+                      />
+                      <div className="card-list-info">
+                        <span className="card-list-name">{card.name}</span>
+                        <span className="card-list-number">#{card.number}</span>
+                      </div>
+                      {card.rarity && (
+                        <span className="card-list-rarity">{card.rarity}</span>
+                      )}
+                      {card.variantCount > 0 && (
+                        <span className="card-list-variant">{card.variantCount} variants</span>
+                      )}
+                      <span className="card-list-price">${getMockPrice(card)}</span>
+                    </Link>
+                    <button
+                      className={`card-list-collect-btn${owned ? ' owned' : ''}`}
+                      onClick={(e) => handleCollect(e, card)}
+                    >
+                      {owned ? `✓ Owned${count > 1 ? ` ×${count}` : ''}` : '+ Collect'}
+                    </button>
+                    {owned && (
+                      <button
+                        className="card-list-add-copy-btn"
+                        onClick={(e) => handleAddCopy(e, card)}
+                        title="Add another copy"
+                      >+</button>
+                    )}
                   </div>
                 )
               })}
